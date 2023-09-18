@@ -1,0 +1,54 @@
+#include "imports/stdlib.fc";
+#include "messages.fc";
+
+const int op::change_dns_record = 0x4eb1f0f9;
+const int op::change_dns_record_req = 0x5eb1f0f9;
+const int op::transfer = 0x5fcc3d14;
+const int op::ownership_assigned = 0x05138d91;
+const int op::excesses = 0xd53276db;
+const int op::reward = 0xe64387ec;
+const int op::add_domain = 0x3b45b2d6; 
+const int op::unpack = 0x855965fc;
+const int op::unpack_all = 0x39e2f30b;
+const int op::touch = 0x11111111;
+
+const int errors::unauthorized = 351;
+const int errors::nothing_to_init = 352;
+const int errors::already_inited = 353;
+const int errors::domain_not_found = 354;
+const int errors::early_touch = 355;
+const int errors::not_inited = 356;
+const int errors::not_enough_balance = 357;
+const int errors::unknown_op = 0xffff;
+
+;; equivalent of sending a message with x TONs
+const int reserve::this_amount = 0;
+;; equivalent of sending a message with almost whole balance but leaving x TONs, and if balance is less than x - throw error
+const int reserve::leave_this_amount = 1;
+;; equivalent of sending a message with x TONs, and if not enough - sending with all avaliable coins
+const int reserve::at_most_this_amount = 2;
+;; equivalent of sending a message with almost whole balance but leaving x TONs, and if balance is less than x - do nothing
+const int reserve::leave_max_this_amount = 3;
+;; equivalent of receiving a message with x TONs
+const int reserve::add_this_amount = 8;
+;; equivalent of receiving a message with (current balance) - x TONs
+const int reserve::add_balance_minus_this_amount = 9;
+;; equivalent of sending a message with (balance before msg) + x TONs
+const int reserve::b_balance_plus_this_amount = 4; 
+;; equivalent of leaving on contract (balance before msg) + x TONs and sending a message with the rest
+const int reserve::leave_b_balance_plus_this_amount = 5; 
+
+(slice, slice, cell, int, slice) unpack_nft_cmd_transfer(slice cs) inline {
+    return (
+        cs~load_msg_addr(),
+        cs~load_msg_addr(),
+        cs~load_dict(),
+        cs~load_grams(),
+        cs
+    );
+}
+
+() force_chain(slice addr) impure inline {
+    (int wc, _) = parse_std_addr(addr);
+    throw_unless(333, wc == 0);
+}

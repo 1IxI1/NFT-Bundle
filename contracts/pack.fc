@@ -1,0 +1,274 @@
+{-
+  DNS Pack Contract for acting with ".ton" and similar
+  contracts https://github.com/ton-blockchain/dns-contract.
+-}
+
+#include "imports/stdlib.fc";
+#include "messages.fc";
+#include "common.fc";
+
+const int min_balance = 50000000; ;; 0.05 TON
+const int reward = 360000000; ;; 0.36 TON
+const int touch_gas = 8600000; ;; 0.0086 TON
+const int unpack_transfer_amount = 10000000; ;; 0.01 TON
+const int touch_amount = 5000000; ;; 0.005 TON
+const int touch_period = 28944000; ;; 11 months in seconds
+
+{- storage scheme:
+    dns_item#_ address:MsgAddress inited:Bool last_touch:uint48 = DNSItem;
+
+    storage#_ inited_count:uint8 domains:(HashmapE 8 DNSItem)
+              owner:MsgAddress = Storage;
+-}
+
+;; inited_count, domains, owner
+(int, cell, slice) load_data() impure inline {
+    slice ds = get_data().begin_parse();
+    return (ds~load_uint(8),
+            ds~load_dict(),
+            ds~load_msg_addr());
+}
+
+() save_data(int inited_count, cell domains, slice owner) impure inline {
+    var new_data = begin_cell().store_uint(inited_count, 8)
+                               .store_dict(domains)
+                               .store_slice(owner)
+                    .end_cell();
+    set_data(new_data);
+}
+
+() transfer_selfdestroy(slice domain_address, slice to_address) impure inline {
+    cell msg = begin_cell()
+                 .store_uint(0x10, 6)
+                 .store_slice(domain_address)
+                 .store_coins(0)
+                 .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                 .store_ref(begin_cell()
+                   .store_uint(op::transfer, 32)
+                   .store_uint(now(), 64)
+                   .store_slice(to_address) ;; dst
+                   .store_slice(to_address) ;; response
+                   .store_uint(0, 1) ;; null custom payload
+                   .store_grams(0) ;; forward amount
+                   .store_uint(0, 1) ;; no forward
+                 .end_cell())
+               .end_cell();
+
+    send_raw_message(msg, mode::CARRY_REMAINING_BALANCE | mode::SELFDESTRUCT_ON_EMPTY);
+}
+
+slice transfer_ownership(int my_balance, slice owner, slice in_msg_body, int query_id, int fwd_fees) impure inline {
+    (slice new_owner, slice response_destination, cell custom_payload, int forward_amount, slice forward_payload)
+            = unpack_nft_cmd_transfer(in_msg_body);
+    force_chain(new_owner);
+    int rest_amount = my_balance - min_balance;
+    if (forward_amount) {
+        rest_amount -= (forward_amount + fwd_fees);
+    }
+    int need_response = response_destination.preload_uint(2) != 0; ;; if NOT addr_none: 00
+    if (need_response) {
+        rest_amount -= fwd_fees;
+    }
+    throw_unless(errors::not_enough_balance, rest_amount >= 0); ;; base nft spends fixed amount of gas, will not check for response
+
+    if (forward_amount) {
+        send_msg(new_owner, forward_amount, op::ownership_assigned, query_id,
+                 begin_cell().store_slice(owner).store_slice(forward_payload), mode::PAY_FEES_SEPARATELY);
+    }
+    if (need_response) {
+        force_chain(response_destination);
+        send_msg(response_destination, rest_amount, op::excesses, query_id, null(), mode::PAY_FEES_SEPARATELY);
+    }
+    return new_owner;
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    ;; accept empty messages as deploy
+    if ( in_msg_body.slice_empty?() ) { return (); }
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+
+    if (flags & 1) { ;; ignore all bounced messages
+        return ();
+    }
+
+    slice sender_address = cs~load_msg_addr();
+
+    cs~load_msg_addr(); ;; skip dst
+    cs~load_grams(); ;; skip value
+    cs~skip_bits(1); ;; skip extracurrency collection
+    cs~load_grams(); ;; skip ihr_fee
+    int fwd_fee = cs~load_grams(); ;; we use message fwd_fee for estimation of forward_payload costs
+
+    (int inited_count, cell domains, slice owner) = load_data();
+
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+
+    ;; ownership_assigned#05138d91 query_id:uint64 prev_owner:MsgAddress
+    ;;                             forward_payload:(Either Cell ^Cell) = InternalMsgBody;
+    if (op == op::ownership_assigned) {
+        (int domain_id, slice last_data, int succ?) = domains.udict_get_max?(8);
+        int total_domains = domain_id + 1;
+        ;; uninitialized domains exist
+        throw_unless(errors::nothing_to_init, inited_count < total_domains);
+        while (succ?) {
+            slice addr = last_data~load_msg_addr();
+            if (equal_slices(addr, sender_address)) {
+                int init? = last_data~load_int(1);
+                throw_if(errors::already_inited, init?);
+                var new_data = begin_cell().store_slice(addr)
+                                           .store_int(true, 1)
+                                           .store_uint(now(), 48); ;; touched now
+                domains~udict_set_builder(8, domain_id, new_data);
+                domain_id = 0; ;; break while loop
+            }
+            (domain_id, last_data, succ?) = domains.udict_get_prev?(8, domain_id);
+        }
+        save_data(inited_count + 1, domains, owner);
+        return ();
+    }
+
+    ;; add_domain#3b45b2d6 query_id:uint64 item_address:MsgAddress = InternalMsgBody;
+    if (op == op::add_domain) {
+        throw_unless(errors::unauthorized, equal_slices(sender_address, owner));
+        slice address = in_msg_body~load_msg_addr();
+        (int last_id, slice last_data, int succ?) = domains.udict_get_max?(8);
+        int domain_id = succ? ? last_id + 1 : 0;
+        var domain_data = begin_cell().store_slice(address)
+                                      .store_int(false, 1) ;; waiting for init
+                                      .store_uint(0, 48); ;; not touched at all
+        domains~udict_set_builder(8, domain_id, domain_data);
+        save_data(inited_count, domains, owner);
+        return ();
+    }
+
+    ;; transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgAddress
+    ;;                   custom_payload:(Maybe ^Cell) forward_amount:(VarUInteger 16)
+    ;;                   forward_payload:(Either Cell ^Cell) = InternalMsgBody;
+    if (op == op::transfer) {
+        throw_unless(errors::unauthorized, equal_slices(sender_address, owner));
+        slice new_owner = transfer_ownership(my_balance, owner, in_msg_body, query_id, fwd_fee);
+        save_data(inited_count, domains, new_owner);
+        return ();
+    }
+
+    ;; change_dns_record_req#5eb1f0f9 query_id:uint64 target_index:uint8
+    ;;                                key:uint256 value:(Maybe ^Cell)
+    ;;                                = InternalMsgBody;
+    if (op == op::change_dns_record_req) {
+        throw_unless(errors::unauthorized, equal_slices(sender_address, owner));
+        int target_index = in_msg_body~load_uint(8);
+        (slice domain_data, int succ?) = domains.udict_get?(8, target_index);
+        throw_unless(errors::domain_not_found, succ?);
+        slice domain_addr = domain_data~load_msg_addr();
+        int init? = domain_data~load_int(1);
+        throw_unless(errors::not_inited, init?);
+        int key = in_msg_body~load_uint(256);
+        var body_part = begin_cell().store_uint(key, 256)
+                                    .store_slice(in_msg_body); ;; ref-value or nothing
+        send_msg(domain_addr, 0, op::change_dns_record, query_id,
+                 body_part, mode::CARRY_REMAINING_GAS);
+        var new_data = begin_cell().store_slice(domain_addr)
+                                   .store_int(true, 1)
+                                   .store_uint(now(), 48); ;; touching
+        domains~udict_set_builder(8, target_index, new_data);
+        save_data(inited_count, domains, owner);
+        return ();
+    }
+
+    ;; unpack#855965fc query_id:uint64 target_index:uint8 = InternalMsgBody;
+    if (op == op::unpack) { ;; unpack one domain by index - transfer to owner
+        throw_unless(errors::unauthorized, equal_slices(sender_address, owner));
+        int target_index = in_msg_body~load_uint(8);
+        (slice domain_data, int succ?) = domains.udict_get?(8, target_index);
+        throw_unless(errors::domain_not_found, succ?);
+        slice domain_addr = domain_data~load_msg_addr();
+        int init? = domain_data~load_int(1);
+        if (init?) { ;; if already owned - transfer to owner
+            var transfer_body = begin_cell().store_slice(owner)
+                                            .store_slice(owner)
+                                            .store_int(false, 1) ;; no custom_payload
+                                            .store_grams(0); ;; no forward amount, excesses instead
+            send_msg(domain_addr, unpack_transfer_amount, op::transfer, query_id, transfer_body, mode::CARRY_REMAINING_GAS);
+            inited_count -= 1;
+        }
+        while (succ?) { ;; remove from list with shifting other domains
+            (slice next_domain_data, succ?) = domains.udict_get?(8, target_index + 1);
+            if (succ?) {
+                domains~udict_set(8, target_index, next_domain_data);
+                target_index += 1;
+            }
+        }
+        save_data(inited_count, domains, owner);
+        return ();
+    }
+
+    ;; unpack_all#39e2f30b  query_id:uint64 = InternalMsgBody;
+    if (op == op::unpack_all) { ;; unpack all - transfer all the domains to owner and selfdestruct
+        throw_unless(errors::unauthorized, equal_slices(sender_address, owner));
+        (int domain_id, slice last_data, int succ?) = domains.udict_get_max?(8);
+        int total_domains = domain_id + 1;
+        throw_unless(errors::not_inited, inited_count == total_domains);
+
+        var transfer_body = begin_cell().store_slice(owner)
+                                        .store_slice(owner)
+                                        .store_int(false, 1)
+                                        .store_grams(0);
+        while (succ?) {
+            slice addr = last_data~load_msg_addr();
+            send_msg(addr, unpack_transfer_amount, op::transfer, query_id, transfer_body, mode::REVERT_ON_ERRORS);
+            (domain_id, last_data, succ?) = domains.udict_get_prev?(8, domain_id);
+        }
+        save_data(0, null(), owner);
+        send_msg(owner, 0, op::excesses, query_id, null(),
+                        mode::CARRY_REMAINING_BALANCE | mode::SELFDESTRUCT_ON_EMPTY);
+        return ();
+    }
+
+    ;; touch#11111111 query_id:uint64 target_index:uint8 allow_min_reward:Bool = InternalMsgBody;
+    if (op == op::touch) {
+        var domain_index = in_msg_body~load_uint(8);
+        ;; when `allow_min_reward` bit is 0 - sender
+        ;; will get exactly $reward TON for touch.
+        ;; when 1 - he may get less - only the surplus of balance.
+        int allow_min_reward? = in_msg_body~load_int(1);
+
+        throw_unless(errors::not_enough_balance,
+                     my_balance >= min_balance + touch_amount + touch_gas
+                     + (allow_min_reward? ? 1 : reward));
+
+        (slice domain_data, int succ?) = domains.udict_get?(8, domain_index);
+        throw_unless(errors::domain_not_found, succ?);
+        var domain_addr = domain_data~load_msg_addr();
+        int init? = domain_data~load_int(1);
+        throw_unless(errors::not_inited, init?);
+        int last_touch = domain_data~load_uint(48);
+        ;; $touch_period seconds should pass between touches
+        throw_unless(errors::early_touch, last_touch + touch_period <= now());
+
+        send_msg(domain_addr, touch_amount, 0, query_id, null(), mode::PAY_FEES_SEPARATELY);
+        raw_reserve(min_balance, reserve::this_amount); ;; leave in 128 only the free rest - surplus of balance
+        raw_reserve(reward, allow_min_reward?
+                              ;; leave $reward TON to send. and at most reward if allow_min_reward
+                              ? reserve::leave_max_this_amount
+                              : reserve::leave_this_amount);
+
+        send_msg(sender_address, 0, op::reward, query_id,
+                 null(), mode::CARRY_REMAINING_BALANCE);
+        return ();
+    }
+
+    throw(errors::unknown_op);
+}
+
+cell get_domains() method_id {
+    (int domains_count, cell domains, slice owner) = load_data();
+    return domains;
+}
+
+(int, int, slice, slice, cell) get_nft_data() method_id {
+    (int domains_count, cell domains, slice owner) = load_data();
+    return (true, -1, null(), owner, null());
+}
