@@ -19,6 +19,7 @@ const int errors::domain_not_found = 354;
 const int errors::early_touch = 355;
 const int errors::not_inited = 356;
 const int errors::not_enough_balance = 357;
+const int errors::not_enough_tons = 358;
 const int errors::unknown_op = 0xffff;
 
 ;; equivalent of sending a message with x TONs

@@ -177,6 +177,38 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
         });
     }
 
+    async sendUnpack(
+        provider: ContractProvider,
+        via: Sender,
+        index: number,
+        value: bigint = toNano("0.15")
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Op.unpack, 32)
+                .storeUint(0, 64)
+                .storeUint(index, 8)
+                .endCell(),
+        });
+    }
+
+    async sendUnpackAll(
+        provider: ContractProvider,
+        via: Sender,
+        value: bigint = toNano("1")
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Op.unpack_all, 32)
+                .storeUint(0, 64)
+                .endCell(),
+        });
+    }
+
     async getDomains(provider: ContractProvider) {
         const { stack } = await provider.get("get_domains", []);
         const domainsCell = stack.readCellOpt();

@@ -313,6 +313,7 @@ describe("DNSPack", () => {
     let newOwner: SandboxContract<TreasuryContract>;
     it("should transfer whole pack", async () => {
         newOwner = await blockchain.treasury("newOwner");
+        const contractBefore = await blockchain.getContract(dnsPack.address);
         const transferResult = await dnsPack.sendTransfer(
             owner.getSender(),
             newOwner.address,
@@ -333,13 +334,237 @@ describe("DNSPack", () => {
         expect(transferResult.transactions).toHaveTransaction({
             from: dnsPack.address,
             to: newOwner.address,
-            success: true,
             op: Op.ownership_assigned,
+            value: toNano("0.05"),
+            success: true,
         });
+        expect(transferResult.transactions).toHaveTransaction({
+            from: dnsPack.address,
+            to: owner.address,
+            op: Op.excesses,
+            success: true,
+        });
+        const contractAfter = await blockchain.getContract(dnsPack.address);
+        expect(contractAfter.balance).toEqual(contractBefore.balance);
     });
     it("should give the new owner address", async () => {
         const data = await dnsPack.getNFTData();
         expect(data.owner.equals(newOwner.address)).toBe(true);
     });
-    // TODO: tests for unpacking
+    it("should transfer back", async () => {
+        await dnsPack.sendTransfer(
+            newOwner.getSender(),
+            owner.address,
+            owner.address,
+            toNano("0.05")
+        );
+        const data = await dnsPack.getNFTData();
+        expect(data.owner.equals(owner.address)).toBe(true);
+    });
+    let deletedIndex: number;
+    it("should unpack and transfer a domain", async () => {
+        deletedIndex = await dnsPack.getDomainIndex(dnsItem1.address);
+        const unpackResult = await dnsPack.sendUnpack(
+            owner.getSender(),
+            deletedIndex
+        );
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: owner.address,
+            to: dnsPack.address,
+            op: Op.unpack,
+            success: true,
+        });
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: dnsPack.address,
+            to: dnsItem1.address,
+            op: Op.transfer,
+            outMessagesCount: 1,
+            success: true,
+        });
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: dnsItem1.address,
+            to: owner.address,
+            op: Op.excesses,
+            success: true,
+        });
+    });
+    it("should shift other domains by index", async () => {
+        const domains = await dnsPack.getDomains();
+        expect(domains.get(0)?.domainAddress.equals(dnsItem2.address)).toBe(
+            true
+        );
+        expect(domains.get(1)?.domainAddress.equals(dnsItem3.address)).toBe(
+            true
+        );
+        expect(domains.get(2)).toBe(undefined);
+    });
+    it("should not unpack not from owner", async () => {
+        const domainIndex = await dnsPack.getDomainIndex(dnsItem2.address);
+        const unpackResult = await dnsPack.sendUnpack(
+            toucher.getSender(),
+            domainIndex
+        );
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: toucher.address,
+            to: dnsPack.address,
+            op: Op.unpack,
+            success: false,
+            exitCode: Errors.unauthorized,
+        });
+    });
+    it("should not unpack if not enough money", async () => {
+        const domainIndex = await dnsPack.getDomainIndex(dnsItem2.address);
+        const unpackResultNo = await dnsPack.sendUnpack(
+            owner.getSender(),
+            domainIndex,
+            toNano("0.14") - 1n
+        );
+        expect(unpackResultNo.transactions).toHaveTransaction({
+            from: owner.address,
+            to: dnsPack.address,
+            op: Op.unpack,
+            success: false,
+            exitCode: Errors.not_enough_tons,
+        });
+        const unpackResultOk = await dnsPack.sendUnpack(
+            owner.getSender(),
+            domainIndex,
+            toNano("0.14")
+        );
+        expect(unpackResultOk.transactions).toHaveTransaction({
+            from: owner.address,
+            to: dnsPack.address,
+            op: Op.unpack,
+            success: true,
+            outMessagesCount: 1,
+        });
+        expect(unpackResultOk.transactions).toHaveTransaction({
+            from: dnsItem2.address,
+            to: owner.address,
+            op: Op.excesses,
+        });
+    });
+    it("should unpack uninited domain without transfer", async () => {
+        const domainsBefore = await dnsPack.getDomains();
+        const addResult = await dnsPack.sendAddDomain(
+            owner.getSender(),
+            dnsItem1.address
+        );
+        expect(addResult.transactions).toHaveTransaction({
+            from: owner.address,
+            to: dnsPack.address,
+            success: true,
+        });
+        const domainIndex = await dnsPack.getDomainIndex(dnsItem1.address);
+        const unpackResult = await dnsPack.sendUnpack(
+            owner.getSender(),
+            domainIndex
+        );
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: owner.address,
+            to: dnsPack.address,
+            op: Op.unpack,
+            success: true,
+            outMessagesCount: 0,
+        });
+        const domainsAfter = await dnsPack.getDomains();
+        expect(domainsAfter.size).toEqual(domainsBefore.size);
+    });
+    it("should withdraw all to leave min balance", async () => {});
+    it("should not unpack if not enough for filling up min balance", async () => {
+        // preparation - touch for leaving min balance
+        // and travel in time to spend balance on storage fee
+        const now = blockchain.now || 0;
+        blockchain.now = now + 28944000;
+        const touchRes = await dnsPack.sendTouch(toucher.getSender(), 0, true);
+        expect(touchRes.transactions).toHaveTransaction({
+            from: toucher.address,
+            to: dnsPack.address,
+            op: Op.touch,
+            success: true,
+        });
+        const contractAfter1 = await blockchain.getContract(dnsPack.address);
+        expect(contractAfter1.balance).toEqual(MIN_BALANCE);
+        blockchain.now += 32000000;
+        // just inititiate of spending storage fee
+        await dnsPack.sendDeploy(owner.getSender(), 1n);
+        const contractAfter2 = await blockchain.getContract(dnsPack.address);
+        expect(contractAfter2.balance).toBeLessThan(
+            MIN_BALANCE - toNano("0.01")
+        );
+
+        const domainIndex = await dnsPack.getDomainIndex(dnsItem3.address);
+        const unpackResultNo = await dnsPack.sendUnpack(
+            owner.getSender(),
+            domainIndex,
+            toNano("0.14")
+        );
+        expect(unpackResultNo.transactions).toHaveTransaction({
+            from: owner.address,
+            to: dnsPack.address,
+            op: Op.unpack,
+            success: false,
+            exitCode: Errors.not_enough_balance,
+        });
+    });
+    it("should unpack if enough for filling", async () => {
+        const domainIndex = await dnsPack.getDomainIndex(dnsItem3.address);
+        const unpackResult = await dnsPack.sendUnpack(
+            owner.getSender(),
+            domainIndex,
+            toNano("0.16")
+        );
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: owner.address,
+            to: dnsPack.address,
+            op: Op.unpack,
+            success: true,
+        });
+    });
+    // TODO: добавить тест когда денег у контракта много, и чтобы он отправил домогателю ТОЛьКО максимум его 0.36;
+    it("should unpack all domains", async () => {
+        // preparation - add 2 domains because we've unpacked all of them
+        await dnsPack.sendAddDomain(owner.getSender(), dnsItem1.address);
+        await dnsPack.sendAddDomain(owner.getSender(), dnsItem2.address);
+        await dnsItem1.sendTransfer(
+            owner.getSender(),
+            dnsPack.address,
+            owner.address
+        );
+        await dnsItem2.sendTransfer(
+            owner.getSender(),
+            dnsPack.address,
+            owner.address
+        )
+        const domains = await dnsPack.getDomains();
+        expect(domains.size).toEqual(2);
+        expect(domains.get(0)?.init).toBe(true);
+        expect(domains.get(0)?.init).toBe(true);
+
+        const unpackResult = await dnsPack.sendUnpackAll(owner.getSender());
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: owner.address,
+            to: dnsPack.address,
+            op: Op.unpack_all,
+            success: true,
+            outMessagesCount: 3, // 2 for transfers + 1 for excesses
+        });
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: dnsItem1.address,
+            to: owner.address,
+            op: Op.excesses,
+        });
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: dnsItem2.address,
+            to: owner.address,
+            op: Op.excesses,
+        });
+        expect(unpackResult.transactions).toHaveTransaction({
+            from: dnsPack.address,
+            to: owner.address,
+            op: Op.excesses,
+        });
+        const contract = await blockchain.getContract(dnsPack.address);
+        expect(contract.balance).toEqual(0n);
+    });
 });

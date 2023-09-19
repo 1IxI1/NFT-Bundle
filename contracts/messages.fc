@@ -58,4 +58,3 @@ builder store_query_id(builder b, int query_id) inline { return b.store_uint(que
     }
     send_raw_message(msg.end_cell(), send_mode);
 }
-

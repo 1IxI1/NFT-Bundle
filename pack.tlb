@@ -43,7 +43,7 @@ change_dns_record_req#5eb1f0f9 query_id:uint64 target_index:uint8
 
 unpack#855965fc query_id:uint64 target_index:uint8 = InternalMsgBody;
 
-unpack_all#39e2f30b  query_id:uint64 = InternalMsgBody;
+unpack_all#39e2f30b query_id:uint64 = InternalMsgBody;
 
 add_domain#3b45b2d6 query_id:uint64 item_address:MsgAddress = InternalMsgBody;
 

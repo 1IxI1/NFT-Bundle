@@ -6,4 +6,6 @@ export abstract class Errors {
     static readonly early_touch = 355;
     static readonly not_inited = 356;
     static readonly not_enough_balance = 357;
+    static readonly not_enough_tons = 358;
+    static readonly unknown_op = 0xffff;
 }
