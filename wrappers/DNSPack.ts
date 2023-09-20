@@ -99,7 +99,7 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
         forwardAmount: bigint = toNano("0.01"),
         value?: bigint,
         customPayload?: Cell,
-        forwardPayload?: Cell,
+        forwardPayload?: Cell
     ) {
         await provider.internal(via, {
             value: value ? value : forwardAmount + toNano("0.05"),
@@ -232,7 +232,7 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
     }
 
     async getNFTData(provider: ContractProvider) {
-        const { stack } = await provider.get('get_nft_data', []);
+        const { stack } = await provider.get("get_nft_data", []);
         const inited = stack.readBoolean();
         const index = stack.readNumber();
         const collection = stack.readAddressOpt();

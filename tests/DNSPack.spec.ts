@@ -1,9 +1,4 @@
-import {
-    Blockchain,
-    SandboxContract,
-    TreasuryContract,
-    printTransactionFees,
-} from "@ton/sandbox";
+import { Blockchain, SandboxContract, TreasuryContract } from "@ton/sandbox";
 import { Cell, fromNano, toNano } from "@ton/core";
 import { DNSPack } from "../wrappers/DNSPack";
 import { DNSItemContract } from "../wrappers/DNSItem";
@@ -17,9 +12,25 @@ import { randomAddress } from "@ton/test-utils";
 const REWARD = toNano("0.36");
 const MIN_BALANCE = toNano("0.05");
 
-const around = (sent: bigint | undefined, expected: bigint) => {
+const around = (
+    sent: bigint | undefined,
+    expected: bigint,
+    debugText?: string
+) => {
     sent = sent ?? 0n;
     const d = expected - sent;
+    if (debugText) {
+        console.log(
+            debugText,
+            "expected:",
+            fromNano(expected),
+            "sent:",
+            fromNano(sent),
+            "difference:",
+            fromNano(d),
+            ""
+        );
+    }
     return d <= toNano("0.001") && d >= 0;
 };
 
@@ -81,8 +92,7 @@ describe("DNSPack", () => {
         }
         const deployPackResult = await dnsPack.sendDeploy(
             owner.getSender(),
-            // 1.5 of reward for touch tests
-            (REWARD * 3n) / 2n
+            toNano("0.85")
         );
         expect(deployPackResult.transactions).toHaveTransaction({
             on: dnsPack.address,
@@ -248,10 +258,35 @@ describe("DNSPack", () => {
             success: true,
             value: (x) => around(x, REWARD),
         });
+        const contract = await blockchain.getContract(dnsPack.address);
+        expect(contract.balance).toBeGreaterThan(REWARD);
+        expect(contract.balance).toBeLessThan(2n * REWARD);
+    });
+    it("should give specified reward with allow_min_reward if enough money", async () => {
+        const touchRes = await dnsPack.sendTouch(toucher.getSender(), 1, true); // set allow_min_reward
+        expect(touchRes.transactions).toHaveTransaction({
+            from: toucher.address,
+            to: dnsPack.address,
+            op: Op.touch,
+            success: true,
+        });
+        expect(touchRes.transactions).toHaveTransaction({
+            from: dnsPack.address,
+            to: dnsItem2.address,
+            op: 0,
+            success: true,
+        });
+        expect(touchRes.transactions).toHaveTransaction({
+            from: dnsPack.address,
+            to: toucher.address,
+            op: Op.reward,
+            success: true,
+            value: (x) => around(x, REWARD, "allow_min_reward"),
+        });
+        const contract = await blockchain.getContract(dnsPack.address);
+        expect(contract.balance).toBeLessThan(REWARD);
     });
     it("should not touch if not enough money on balance and full reward", async () => {
-        const packContract = await blockchain.getContract(dnsPack.address);
-        expect(packContract.balance).toBeLessThan(REWARD);
         const touchRes = await dnsPack.sendTouch(toucher.getSender(), 0, false);
         expect(touchRes.transactions).toHaveTransaction({
             from: toucher.address,
@@ -274,7 +309,6 @@ describe("DNSPack", () => {
             to: toucher.address,
             op: Op.reward,
         });
-        printTransactionFees(touchRes.transactions);
     });
     it("should now have minimum balance", async () => {
         // no time pased between last 2 actions ->
@@ -521,7 +555,6 @@ describe("DNSPack", () => {
             success: true,
         });
     });
-    // TODO: добавить тест когда денег у контракта много, и чтобы он отправил домогателю ТОЛьКО максимум его 0.36;
     it("should unpack all domains", async () => {
         // preparation - add 2 domains because we've unpacked all of them
         await dnsPack.sendAddDomain(owner.getSender(), dnsItem1.address);
@@ -535,7 +568,7 @@ describe("DNSPack", () => {
             owner.getSender(),
             dnsPack.address,
             owner.address
-        )
+        );
         const domains = await dnsPack.getDomains();
         expect(domains.size).toEqual(2);
         expect(domains.get(0)?.init).toBe(true);
