@@ -1,6 +1,6 @@
 {
-    "name": "domains-pack-contract",
-    "version": "0.0.1",
+    "name": "nft-bundle-contract",
+    "version": "1.0.0",
     "license": "MIT",
     "scripts": {
         "start": "blueprint run",
