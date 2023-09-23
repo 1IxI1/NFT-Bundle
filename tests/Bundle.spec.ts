@@ -1,6 +1,6 @@
 import { Blockchain, SandboxContract, TreasuryContract } from "@ton/sandbox";
 import { Cell, fromNano, toNano } from "@ton/core";
-import { DNSPack } from "../wrappers/DNSPack";
+import { Bundle } from "../wrappers/Bundle";
 import { DNSItemContract } from "../wrappers/DNSItem";
 import "@ton/test-utils";
 import { compile } from "@ton/blueprint";
@@ -9,6 +9,7 @@ import { getSecureRandomNumber } from "@ton/crypto";
 import { Errors } from "../wrappers/Errors";
 import { randomAddress } from "@ton/test-utils";
 
+// contract variables
 const REWARD = toNano("0.36");
 const MIN_BALANCE = toNano("0.05");
 
@@ -34,12 +35,16 @@ const around = (
     return d <= toNano("0.001") && d >= 0;
 };
 
-describe("DNSPack", () => {
-    let dnsPackCode: Cell;
-    let dnsPack: SandboxContract<DNSPack>;
+describe("Bundle", () => {
+    let bundleCode: Cell;
+    let bundle: SandboxContract<Bundle>;
     let blockchain: Blockchain;
     let owner: SandboxContract<TreasuryContract>;
     let toucher: SandboxContract<TreasuryContract>;
+
+    // using dns items in tests because they have
+    // standard NFT interface and we can test both
+    // interactions with NFTs and domains themselves
     let dnsItem1: SandboxContract<DNSItemContract>;
     let dnsItem2: SandboxContract<DNSItemContract>;
     let dnsItem3: SandboxContract<DNSItemContract>;
@@ -51,7 +56,7 @@ describe("DNSPack", () => {
         owner = await blockchain.treasury("owner");
         toucher = await blockchain.treasury("toucher");
 
-        dnsPackCode = await compile("DNSPack");
+        bundleCode = await compile("Bundle");
 
         dnsItem1 = blockchain.openContract(
             DNSItemContract.createFromConfig({
@@ -71,13 +76,13 @@ describe("DNSPack", () => {
                 owner: owner.address,
             })
         );
-        dnsPack = blockchain.openContract(
-            DNSPack.createFromConfig(
+        bundle = blockchain.openContract(
+            Bundle.createFromConfig(
                 {
                     owner: owner.address,
-                    domains: [dnsItem1.address, dnsItem2.address],
+                    collectibles: [dnsItem1.address, dnsItem2.address],
                 },
-                dnsPackCode
+                bundleCode
             )
         );
         for (const cont of [dnsItem1, dnsItem2, dnsItem3]) {
@@ -90,112 +95,116 @@ describe("DNSPack", () => {
                 deploy: true,
             });
         }
-        const deployPackResult = await dnsPack.sendDeploy(
+        const deployPackResult = await bundle.sendDeploy(
             owner.getSender(),
             toNano("0.85")
         );
         expect(deployPackResult.transactions).toHaveTransaction({
-            on: dnsPack.address,
+            on: bundle.address,
             deploy: true,
         });
     });
     it("should deploy domains and the pack", async () => {
         // checks the success of beforeAll
     });
-    it("should give uninit domains", async () => {
-        const domains = await dnsPack.getDomains();
-        const domain1 = domains.get(0);
-        const domain2 = domains.get(1);
+    it("should give uninit items", async () => {
+        const collectibles = await bundle.getCollectibles();
+        const domain1 = collectibles.get(0);
+        const domain2 = collectibles.get(1);
         expect(domain1?.init).toBe(false);
         expect(domain2?.init).toBe(false);
         expect(domain1?.lastTouched).toBe(0);
         expect(domain2?.lastTouched).toBe(0);
-        expect(domain1?.domainAddress.equals(dnsItem1.address)).toBe(true);
-        expect(domain2?.domainAddress.equals(dnsItem2.address)).toBe(true);
+        expect(domain1?.itemAddress.equals(dnsItem1.address)).toBe(true);
+        expect(domain2?.itemAddress.equals(dnsItem2.address)).toBe(true);
+    });
+    it("should have uninit in its nft data while items are uninit", async () => {
+        const data = await bundle.getNFTData();
+        expect(data.inited).toBe(false);
     });
     it("should receive and init domain on transfer", async () => {
         blockchain.now = 120;
         const transferResult = await dnsItem1.sendTransfer(
             owner.getSender(),
-            dnsPack.address,
+            bundle.address,
             owner.address
         );
         expect(transferResult.transactions).toHaveTransaction({
             from: dnsItem1.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.ownership_assigned,
             success: true,
         });
-        const domains = await dnsPack.getDomains();
-        const domain1 = domains.get(0);
+        const collectibles = await bundle.getCollectibles();
+        const domain1 = collectibles.get(0);
         expect(domain1?.init).toBe(true);
         expect(domain1?.lastTouched).toBe(blockchain.now);
-        expect(domain1?.domainAddress.equals(dnsItem1.address)).toBe(true);
+        expect(domain1?.itemAddress.equals(dnsItem1.address)).toBe(true);
     });
     it("should init the second domain", async () => {
         blockchain.now = 130;
         const transferResult = await dnsItem2.sendTransfer(
             owner.getSender(),
-            dnsPack.address,
+            bundle.address,
             owner.address
         );
         expect(transferResult.transactions).toHaveTransaction({
             from: dnsItem2.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.ownership_assigned,
             success: true,
         });
-        const domains = await dnsPack.getDomains();
-        const domain2 = domains.get(1);
+        const collectibles = await bundle.getCollectibles();
+        const domain2 = collectibles.get(1);
         expect(domain2?.init).toBe(true);
         expect(domain2?.lastTouched).toBe(blockchain.now);
-        expect(domain2?.domainAddress.equals(dnsItem2.address)).toBe(true);
+        expect(domain2?.itemAddress.equals(dnsItem2.address)).toBe(true);
     });
     it("should add third domain", async () => {
         blockchain.now = 140;
-        const domainsBefore = await dnsPack.getDomains();
-        expect(domainsBefore.size).toEqual(2);
-        const addResult = await dnsPack.sendAddDomain(
+        const collectiblesBefore = await bundle.getCollectibles();
+        expect(collectiblesBefore.size).toEqual(2);
+        const addResult = await bundle.sendAddItem(
             owner.getSender(),
             dnsItem3.address
         );
         expect(addResult.transactions).toHaveTransaction({
-            on: dnsPack.address,
-            op: Op.add_domain,
+            on: bundle.address,
+            op: Op.add_item,
             success: true,
         });
-        const domainsAfter = await dnsPack.getDomains();
-        expect(domainsAfter.size).toEqual(3);
-        const domain3 = domainsAfter.get(2);
+        const collectiblesAfter = await bundle.getCollectibles();
+        expect(collectiblesAfter.size).toEqual(3);
+        const domain3 = collectiblesAfter.get(2);
         expect(domain3?.init).toBe(false);
         expect(domain3?.lastTouched).toBe(0);
-        expect(domain3?.domainAddress.equals(dnsItem3.address)).toBe(true);
+        expect(domain3?.itemAddress.equals(dnsItem3.address)).toBe(true);
     });
     it("should init the third domain", async () => {
         blockchain.now = 150;
         await dnsItem3.sendTransfer(
             owner.getSender(),
-            dnsPack.address,
+            bundle.address,
             owner.address
         );
-        const domains = await dnsPack.getDomains();
-        const domain3 = domains.get(2);
+        const collectibles = await bundle.getCollectibles();
+        const domain3 = collectibles.get(2);
         expect(domain3?.init).toBe(true);
         expect(domain3?.lastTouched).toBe(blockchain.now);
     });
     it("should give every domain its index", async () => {
-        const d1Index = await dnsPack.getDomainIndex(dnsItem1.address);
-        const d2Index = await dnsPack.getDomainIndex(dnsItem2.address);
-        const d3Index = await dnsPack.getDomainIndex(dnsItem3.address);
+        const d1Index = await bundle.getDomainIndex(dnsItem1.address);
+        const d2Index = await bundle.getDomainIndex(dnsItem2.address);
+        const d3Index = await bundle.getDomainIndex(dnsItem3.address);
         expect(d1Index).toEqual(0);
         expect(d2Index).toEqual(1);
         expect(d3Index).toEqual(2);
     });
     it("should allow to edit some domain record", async () => {
         blockchain.now = 160;
-        const domainIndex = await dnsPack.getDomainIndex(dnsItem1.address);
+        const domainIndex = await bundle.getDomainIndex(dnsItem1.address);
         const categoryToEdit = BigInt(await getSecureRandomNumber(1, 1 << 51));
-        const editResult = await dnsPack.sendChangeRecordReq(
+        const editResult = await bundle.sendChangeRecordReq(
             owner.getSender(),
             domainIndex,
             categoryToEdit,
@@ -203,12 +212,12 @@ describe("DNSPack", () => {
         );
         expect(editResult.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.change_dns_record_req,
             success: true,
         });
         expect(editResult.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: dnsItem1.address,
             op: Op.change_dns_record,
             success: true,
@@ -219,17 +228,17 @@ describe("DNSPack", () => {
         });
     });
     it("should write edit record as a touch", async () => {
-        const domains = await dnsPack.getDomains();
-        const domain1 = domains.get(0);
+        const collectibles = await bundle.getCollectibles();
+        const domain1 = collectibles.get(0);
         expect(domain1?.lastTouched).toBe(blockchain.now);
     });
     it("should not let to touch for reward if not enough time passed", async () => {
         const now = blockchain.now || 0;
         blockchain.now = now + 28944000 - 1; // almost 11 months
-        const touchRes = await dnsPack.sendTouch(toucher.getSender(), 0, false);
+        const touchRes = await bundle.sendTouch(toucher.getSender(), 0, false);
         expect(touchRes.transactions).toHaveTransaction({
             from: toucher.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.touch,
             success: false,
             exitCode: Errors.early_touch,
@@ -238,74 +247,74 @@ describe("DNSPack", () => {
     it("should touch and give reward", async () => {
         const now = blockchain.now || 0;
         blockchain.now = now + 1;
-        const touchRes = await dnsPack.sendTouch(toucher.getSender(), 0, false);
+        const touchRes = await bundle.sendTouch(toucher.getSender(), 0, false);
         expect(touchRes.transactions).toHaveTransaction({
             from: toucher.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.touch,
             success: true,
         });
         expect(touchRes.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: dnsItem1.address,
             op: 0,
             success: true,
         });
         expect(touchRes.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: toucher.address,
             op: Op.reward,
             success: true,
             value: (x) => around(x, REWARD),
         });
-        const contract = await blockchain.getContract(dnsPack.address);
+        const contract = await blockchain.getContract(bundle.address);
         expect(contract.balance).toBeGreaterThan(REWARD);
         expect(contract.balance).toBeLessThan(2n * REWARD);
     });
     it("should give specified reward with allow_min_reward if enough money", async () => {
-        const touchRes = await dnsPack.sendTouch(toucher.getSender(), 1, true); // set allow_min_reward
+        const touchRes = await bundle.sendTouch(toucher.getSender(), 1, true); // set allow_min_reward
         expect(touchRes.transactions).toHaveTransaction({
             from: toucher.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.touch,
             success: true,
         });
         expect(touchRes.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: dnsItem2.address,
             op: 0,
             success: true,
         });
         expect(touchRes.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: toucher.address,
             op: Op.reward,
             success: true,
-            value: (x) => around(x, REWARD, "allow_min_reward"),
+            value: (x) => around(x, REWARD),
         });
-        const contract = await blockchain.getContract(dnsPack.address);
+        const contract = await blockchain.getContract(bundle.address);
         expect(contract.balance).toBeLessThan(REWARD);
     });
     it("should not touch if not enough money on balance and full reward", async () => {
-        const touchRes = await dnsPack.sendTouch(toucher.getSender(), 0, false);
+        const touchRes = await bundle.sendTouch(toucher.getSender(), 0, false);
         expect(touchRes.transactions).toHaveTransaction({
             from: toucher.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.touch,
             success: false,
             exitCode: Errors.not_enough_balance,
         });
     });
     it("should touch with min reward", async () => {
-        const touchRes = await dnsPack.sendTouch(toucher.getSender(), 0, true);
+        const touchRes = await bundle.sendTouch(toucher.getSender(), 0, true);
         expect(touchRes.transactions).toHaveTransaction({
             from: toucher.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.touch,
             success: true,
         });
         expect(touchRes.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: toucher.address,
             op: Op.reward,
         });
@@ -314,11 +323,11 @@ describe("DNSPack", () => {
         // no time pased between last 2 actions ->
         // no storage fees ->
         // exact min_balance on contract
-        const packContract = await blockchain.getContract(dnsPack.address);
+        const packContract = await blockchain.getContract(bundle.address);
         expect(packContract.balance).toEqual(MIN_BALANCE);
     });
     it("should not touch if not enough money even for minimum reward", async () => {
-        const touchRes = await dnsPack.sendTouch(
+        const touchRes = await bundle.sendTouch(
             toucher.getSender(),
             0,
             true,
@@ -326,20 +335,20 @@ describe("DNSPack", () => {
         );
         expect(touchRes.transactions).toHaveTransaction({
             from: toucher.address,
-            to: dnsPack.address,
+            to: bundle.address,
             success: false,
             exitCode: Errors.not_enough_balance,
         });
     });
     it("should not add domain not from owner", async () => {
-        const addResult = await dnsPack.sendAddDomain(
+        const addResult = await bundle.sendAddItem(
             toucher.getSender(),
             randomAddress()
         );
         expect(addResult.transactions).toHaveTransaction({
             from: toucher.address,
-            to: dnsPack.address,
-            op: Op.add_domain,
+            to: bundle.address,
+            op: Op.add_item,
             success: false,
             exitCode: Errors.unauthorized,
         });
@@ -347,8 +356,8 @@ describe("DNSPack", () => {
     let newOwner: SandboxContract<TreasuryContract>;
     it("should transfer whole pack", async () => {
         newOwner = await blockchain.treasury("newOwner");
-        const contractBefore = await blockchain.getContract(dnsPack.address);
-        const transferResult = await dnsPack.sendTransfer(
+        const contractBefore = await blockchain.getContract(bundle.address);
+        const transferResult = await bundle.sendTransfer(
             owner.getSender(),
             newOwner.address,
             owner.address,
@@ -356,60 +365,60 @@ describe("DNSPack", () => {
         );
         expect(transferResult.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             success: true,
             op: Op.transfer,
         });
         expect(transferResult.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: owner.address,
             success: true,
         });
         expect(transferResult.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: newOwner.address,
             op: Op.ownership_assigned,
             value: toNano("0.05"),
             success: true,
         });
         expect(transferResult.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: owner.address,
             op: Op.excesses,
             success: true,
         });
-        const contractAfter = await blockchain.getContract(dnsPack.address);
+        const contractAfter = await blockchain.getContract(bundle.address);
         expect(contractAfter.balance).toEqual(contractBefore.balance);
     });
     it("should give the new owner address", async () => {
-        const data = await dnsPack.getNFTData();
+        const data = await bundle.getNFTData();
         expect(data.owner.equals(newOwner.address)).toBe(true);
     });
     it("should transfer back", async () => {
-        await dnsPack.sendTransfer(
+        await bundle.sendTransfer(
             newOwner.getSender(),
             owner.address,
             owner.address,
             toNano("0.05")
         );
-        const data = await dnsPack.getNFTData();
+        const data = await bundle.getNFTData();
         expect(data.owner.equals(owner.address)).toBe(true);
     });
     let deletedIndex: number;
     it("should unpack and transfer a domain", async () => {
-        deletedIndex = await dnsPack.getDomainIndex(dnsItem1.address);
-        const unpackResult = await dnsPack.sendUnpack(
+        deletedIndex = await bundle.getDomainIndex(dnsItem1.address);
+        const unpackResult = await bundle.sendUnpack(
             owner.getSender(),
             deletedIndex
         );
         expect(unpackResult.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.unpack,
             success: true,
         });
         expect(unpackResult.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: dnsItem1.address,
             op: Op.transfer,
             outMessagesCount: 1,
@@ -422,52 +431,52 @@ describe("DNSPack", () => {
             success: true,
         });
     });
-    it("should shift other domains by index", async () => {
-        const domains = await dnsPack.getDomains();
-        expect(domains.get(0)?.domainAddress.equals(dnsItem2.address)).toBe(
+    it("should shift other collectibles by index", async () => {
+        const collectibles = await bundle.getCollectibles();
+        expect(collectibles.get(0)?.itemAddress.equals(dnsItem2.address)).toBe(
             true
         );
-        expect(domains.get(1)?.domainAddress.equals(dnsItem3.address)).toBe(
+        expect(collectibles.get(1)?.itemAddress.equals(dnsItem3.address)).toBe(
             true
         );
-        expect(domains.get(2)).toBe(undefined);
+        expect(collectibles.get(2)).toBe(undefined);
     });
     it("should not unpack not from owner", async () => {
-        const domainIndex = await dnsPack.getDomainIndex(dnsItem2.address);
-        const unpackResult = await dnsPack.sendUnpack(
+        const domainIndex = await bundle.getDomainIndex(dnsItem2.address);
+        const unpackResult = await bundle.sendUnpack(
             toucher.getSender(),
             domainIndex
         );
         expect(unpackResult.transactions).toHaveTransaction({
             from: toucher.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.unpack,
             success: false,
             exitCode: Errors.unauthorized,
         });
     });
     it("should not unpack if not enough money", async () => {
-        const domainIndex = await dnsPack.getDomainIndex(dnsItem2.address);
-        const unpackResultNo = await dnsPack.sendUnpack(
+        const domainIndex = await bundle.getDomainIndex(dnsItem2.address);
+        const unpackResultNo = await bundle.sendUnpack(
             owner.getSender(),
             domainIndex,
             toNano("0.14") - 1n
         );
         expect(unpackResultNo.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.unpack,
             success: false,
             exitCode: Errors.not_enough_tons,
         });
-        const unpackResultOk = await dnsPack.sendUnpack(
+        const unpackResultOk = await bundle.sendUnpack(
             owner.getSender(),
             domainIndex,
             toNano("0.14")
         );
         expect(unpackResultOk.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.unpack,
             success: true,
             outMessagesCount: 1,
@@ -479,30 +488,30 @@ describe("DNSPack", () => {
         });
     });
     it("should unpack uninited domain without transfer", async () => {
-        const domainsBefore = await dnsPack.getDomains();
-        const addResult = await dnsPack.sendAddDomain(
+        const collectiblesBefore = await bundle.getCollectibles();
+        const addResult = await bundle.sendAddItem(
             owner.getSender(),
             dnsItem1.address
         );
         expect(addResult.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             success: true,
         });
-        const domainIndex = await dnsPack.getDomainIndex(dnsItem1.address);
-        const unpackResult = await dnsPack.sendUnpack(
+        const domainIndex = await bundle.getDomainIndex(dnsItem1.address);
+        const unpackResult = await bundle.sendUnpack(
             owner.getSender(),
             domainIndex
         );
         expect(unpackResult.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.unpack,
             success: true,
             outMessagesCount: 0,
         });
-        const domainsAfter = await dnsPack.getDomains();
-        expect(domainsAfter.size).toEqual(domainsBefore.size);
+        const collectiblesAfter = await bundle.getCollectibles();
+        expect(collectiblesAfter.size).toEqual(collectiblesBefore.size);
     });
     it("should withdraw all to leave min balance", async () => {});
     it("should not unpack if not enough for filling up min balance", async () => {
@@ -510,74 +519,74 @@ describe("DNSPack", () => {
         // and travel in time to spend balance on storage fee
         const now = blockchain.now || 0;
         blockchain.now = now + 28944000;
-        const touchRes = await dnsPack.sendTouch(toucher.getSender(), 0, true);
+        const touchRes = await bundle.sendTouch(toucher.getSender(), 0, true);
         expect(touchRes.transactions).toHaveTransaction({
             from: toucher.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.touch,
             success: true,
         });
-        const contractAfter1 = await blockchain.getContract(dnsPack.address);
+        const contractAfter1 = await blockchain.getContract(bundle.address);
         expect(contractAfter1.balance).toEqual(MIN_BALANCE);
         blockchain.now += 32000000;
         // just inititiate of spending storage fee
-        await dnsPack.sendDeploy(owner.getSender(), 1n);
-        const contractAfter2 = await blockchain.getContract(dnsPack.address);
+        await bundle.sendDeploy(owner.getSender(), 1n);
+        const contractAfter2 = await blockchain.getContract(bundle.address);
         expect(contractAfter2.balance).toBeLessThan(
             MIN_BALANCE - toNano("0.01")
         );
 
-        const domainIndex = await dnsPack.getDomainIndex(dnsItem3.address);
-        const unpackResultNo = await dnsPack.sendUnpack(
+        const domainIndex = await bundle.getDomainIndex(dnsItem3.address);
+        const unpackResultNo = await bundle.sendUnpack(
             owner.getSender(),
             domainIndex,
             toNano("0.14")
         );
         expect(unpackResultNo.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.unpack,
             success: false,
             exitCode: Errors.not_enough_balance,
         });
     });
     it("should unpack if enough for filling", async () => {
-        const domainIndex = await dnsPack.getDomainIndex(dnsItem3.address);
-        const unpackResult = await dnsPack.sendUnpack(
+        const domainIndex = await bundle.getDomainIndex(dnsItem3.address);
+        const unpackResult = await bundle.sendUnpack(
             owner.getSender(),
             domainIndex,
             toNano("0.16")
         );
         expect(unpackResult.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.unpack,
             success: true,
         });
     });
-    it("should unpack all domains", async () => {
+    it("should unpack all the items", async () => {
         // preparation - add 2 domains because we've unpacked all of them
-        await dnsPack.sendAddDomain(owner.getSender(), dnsItem1.address);
-        await dnsPack.sendAddDomain(owner.getSender(), dnsItem2.address);
+        await bundle.sendAddItem(owner.getSender(), dnsItem1.address);
+        await bundle.sendAddItem(owner.getSender(), dnsItem2.address);
         await dnsItem1.sendTransfer(
             owner.getSender(),
-            dnsPack.address,
+            bundle.address,
             owner.address
         );
         await dnsItem2.sendTransfer(
             owner.getSender(),
-            dnsPack.address,
+            bundle.address,
             owner.address
         );
-        const domains = await dnsPack.getDomains();
-        expect(domains.size).toEqual(2);
-        expect(domains.get(0)?.init).toBe(true);
-        expect(domains.get(0)?.init).toBe(true);
+        const collectibles = await bundle.getCollectibles();
+        expect(collectibles.size).toEqual(2);
+        expect(collectibles.get(0)?.init).toBe(true);
+        expect(collectibles.get(0)?.init).toBe(true);
 
-        const unpackResult = await dnsPack.sendUnpackAll(owner.getSender());
+        const unpackResult = await bundle.sendUnpackAll(owner.getSender());
         expect(unpackResult.transactions).toHaveTransaction({
             from: owner.address,
-            to: dnsPack.address,
+            to: bundle.address,
             op: Op.unpack_all,
             success: true,
             outMessagesCount: 3, // 2 for transfers + 1 for excesses
@@ -593,11 +602,11 @@ describe("DNSPack", () => {
             op: Op.excesses,
         });
         expect(unpackResult.transactions).toHaveTransaction({
-            from: dnsPack.address,
+            from: bundle.address,
             to: owner.address,
             op: Op.excesses,
         });
-        const contract = await blockchain.getContract(dnsPack.address);
+        const contract = await blockchain.getContract(bundle.address);
         expect(contract.balance).toEqual(0n);
     });
 });
