@@ -32,9 +32,9 @@ _ _:MsgAddressInt = MsgAddress;
 
 
 
-dns_item#_ address:MsgAddress inited:Bool last_touch:uint48 = DNSItem;
+collectible#_ address:MsgAddress inited:Bool last_touch:uint48 = Item;
 
-storage#_ inited_count:uint8 collectibles:(HashmapE 8 DNSItem)
+storage#_ inited_count:uint8 collectibles:(HashmapE 8 Item)
           owner:MsgAddress = Storage;
 
 change_dns_record_req#5eb1f0f9 query_id:uint64 target_index:uint8
