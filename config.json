@@ -1,0 +1,136 @@
+{
+  "Bundle": {
+    "defaultAddress": "",
+    "tabName": "",
+    "sendFunctions": {
+      "sendDeploy": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": ""
+          }
+        }
+      },
+      "sendTransfer": {
+        "tabName": "",
+        "params": {
+          "to": {
+            "fieldTitle": ""
+          },
+          "response": {
+            "fieldTitle": ""
+          },
+          "forwardAmount": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          },
+          "value": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          },
+          "customPayload": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          },
+          "forwardPayload": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendAddItem": {
+        "tabName": "",
+        "params": {
+          "item": {
+            "fieldTitle": ""
+          },
+          "value": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendChangeRecordReq": {
+        "tabName": "",
+        "params": {
+          "index": {
+            "fieldTitle": ""
+          },
+          "key": {
+            "fieldTitle": ""
+          },
+          "value": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          },
+          "tons": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendTouch": {
+        "tabName": "",
+        "params": {
+          "index": {
+            "fieldTitle": ""
+          },
+          "allowMinReward": {
+            "fieldTitle": ""
+          },
+          "value": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendUnpack": {
+        "tabName": "",
+        "params": {
+          "index": {
+            "fieldTitle": ""
+          },
+          "value": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendUnpackAll": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          }
+        }
+      }
+    },
+    "getFunctions": {
+      "getCollectibles": {
+        "tabName": "",
+        "params": {},
+        "outNames": []
+      },
+      "getDomainIndex": {
+        "tabName": "",
+        "params": {
+          "target": {
+            "fieldTitle": ""
+          }
+        },
+        "outNames": []
+      },
+      "getNFTData": {
+        "tabName": "",
+        "params": {},
+        "outNames": []
+      },
+      "getOwnerAddress": {
+        "tabName": "",
+        "params": {},
+        "outNames": []
+      }
+    }
+  }
+}
