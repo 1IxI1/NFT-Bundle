@@ -19,6 +19,17 @@ export const promptBool = async (
     return yes;
 };
 
+export const promptAddressOrIndex = async (
+    provider: UIProvider
+): Promise<Address | number> => {
+    let testAddr = await provider.input("Item address or index:");
+    try {
+        return Address.parse(testAddr);
+    } catch (e) {
+        return Number(testAddr);
+    }
+};
+
 export const promptAddress = async (
     prompt: string,
     provider: UIProvider,
@@ -61,21 +72,25 @@ export const promptAmount = async (prompt: string, provider: UIProvider) => {
 export const waitForTransaction = async (
     provider: NetworkProvider,
     address: Address,
-    curTx: string | null,
     maxRetry: number,
     interval: number = 1000
 ) => {
+    const api = provider.api();
+
+    const { last } = await api.getLastBlock();
+    const { account } = await api.getAccount(last.seqno, address);
+    const lastTxLt = account.last?.lt;
+
     let done = false;
     let count = 0;
     const ui = provider.ui();
-    const api = provider.api();
 
     do {
         ui.write(`Awaiting transaction completion [${++count}/${maxRetry}]`);
         await sleep(interval);
         const { last } = await api.getLastBlock();
         const { account } = await api.getAccount(last.seqno, address);
-        done = account.last?.lt !== curTx;
+        done = account.last?.lt !== lastTxLt;
     } while (!done && count < maxRetry);
     return done;
 };
