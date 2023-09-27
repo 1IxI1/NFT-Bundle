@@ -219,7 +219,7 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
         );
     }
 
-    async getDomainIndex(provider: ContractProvider, target: Address) {
+    async getCollectibleIndex(provider: ContractProvider, target: Address) {
         const collectibles = await this.getCollectibles(provider);
         for (let i = 0; i < collectibles.size; i++) {
             const item = collectibles.get(i);
@@ -244,5 +244,15 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
     async getOwnerAddress(provider: ContractProvider) {
         const { owner } = await this.getNFTData(provider);
         return owner;
+    }
+
+    async getTouchPeriod(provider: ContractProvider) {
+        const { stack } = await provider.get("get_touch_period", []);
+        return stack.readNumber();
+    }
+
+    async getMaxReward(provider: ContractProvider) {
+        const { stack } = await provider.get("get_max_reward", []);
+        return stack.readBigNumber();
     }
 }

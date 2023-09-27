@@ -280,6 +280,14 @@ cell get_collectibles() method_id {
     return collectibles;
 }
 
+int get_touch_period() method_id {
+    return touch_period;
+}
+
+int get_max_reward() method_id {
+    return reward;
+}
+
 (int, int, slice, slice, cell) get_nft_data() method_id {
     (int inited_count, cell collectibles, slice owner) = load_data();
     (int last_item_id, _, int succ?) = collectibles.udict_get_max?(8);

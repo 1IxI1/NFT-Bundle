@@ -50,7 +50,7 @@ export async function run(provider: NetworkProvider, args: string[]) {
         );
         if (await waitForTransaction(provider, bundle.address, 10)) {
             const items = await bundle.getCollectibles();
-            const itemIndex = await bundle.getDomainIndex(addr);
+            const itemIndex = await bundle.getCollectibleIndex(addr);
             if (items.get(itemIndex)?.init)
                 ui.write("Successfully transfered NFT " + addr.toString());
             else ui.write("Failed to transfer NFT " + addr.toString());

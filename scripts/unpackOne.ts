@@ -20,7 +20,7 @@ export async function run(provider: NetworkProvider, args: string[]) {
 
     const itemIndex =
         itemAddressOrIndex instanceof Address
-            ? await bundle.getDomainIndex(itemAddressOrIndex)
+            ? await bundle.getCollectibleIndex(itemAddressOrIndex)
             : itemAddressOrIndex;
     if (itemIndex < 0) {
         throw new Error("Item is not in the bundle");

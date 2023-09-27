@@ -21,7 +21,7 @@ export async function run(provider: NetworkProvider, args: string[]) {
 
     const bundle = provider.open(Bundle.createFromAddress(bundleAddress));
 
-    const itemIndex = await bundle.getDomainIndex(itemAddress);
+    const itemIndex = await bundle.getCollectibleIndex(itemAddress);
     if (itemIndex !== -1) {
         throw new Error("Item already exists");
     }
@@ -33,7 +33,7 @@ export async function run(provider: NetworkProvider, args: string[]) {
         return;
     }
 
-    const newItemIndex = await bundle.getDomainIndex(itemAddress);
+    const newItemIndex = await bundle.getCollectibleIndex(itemAddress);
     if (newItemIndex === -1) {
         throw new Error("Failed to add item");
     }

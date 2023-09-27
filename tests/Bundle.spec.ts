@@ -193,16 +193,16 @@ describe("Bundle", () => {
         expect(domain3?.lastTouched).toBe(blockchain.now);
     });
     it("should give every domain its index", async () => {
-        const d1Index = await bundle.getDomainIndex(dnsItem1.address);
-        const d2Index = await bundle.getDomainIndex(dnsItem2.address);
-        const d3Index = await bundle.getDomainIndex(dnsItem3.address);
+        const d1Index = await bundle.getCollectibleIndex(dnsItem1.address);
+        const d2Index = await bundle.getCollectibleIndex(dnsItem2.address);
+        const d3Index = await bundle.getCollectibleIndex(dnsItem3.address);
         expect(d1Index).toEqual(0);
         expect(d2Index).toEqual(1);
         expect(d3Index).toEqual(2);
     });
     it("should allow to edit some domain record", async () => {
         blockchain.now = 160;
-        const domainIndex = await bundle.getDomainIndex(dnsItem1.address);
+        const domainIndex = await bundle.getCollectibleIndex(dnsItem1.address);
         const categoryToEdit = BigInt(await getSecureRandomNumber(1, 1 << 51));
         const editResult = await bundle.sendChangeRecordReq(
             owner.getSender(),
@@ -406,7 +406,7 @@ describe("Bundle", () => {
     });
     let deletedIndex: number;
     it("should unpack and transfer a domain", async () => {
-        deletedIndex = await bundle.getDomainIndex(dnsItem1.address);
+        deletedIndex = await bundle.getCollectibleIndex(dnsItem1.address);
         const unpackResult = await bundle.sendUnpack(
             owner.getSender(),
             deletedIndex
@@ -442,7 +442,7 @@ describe("Bundle", () => {
         expect(collectibles.get(2)).toBe(undefined);
     });
     it("should not unpack not from owner", async () => {
-        const domainIndex = await bundle.getDomainIndex(dnsItem2.address);
+        const domainIndex = await bundle.getCollectibleIndex(dnsItem2.address);
         const unpackResult = await bundle.sendUnpack(
             toucher.getSender(),
             domainIndex
@@ -456,7 +456,7 @@ describe("Bundle", () => {
         });
     });
     it("should not unpack if not enough money", async () => {
-        const domainIndex = await bundle.getDomainIndex(dnsItem2.address);
+        const domainIndex = await bundle.getCollectibleIndex(dnsItem2.address);
         const unpackResultNo = await bundle.sendUnpack(
             owner.getSender(),
             domainIndex,
@@ -498,7 +498,7 @@ describe("Bundle", () => {
             to: bundle.address,
             success: true,
         });
-        const domainIndex = await bundle.getDomainIndex(dnsItem1.address);
+        const domainIndex = await bundle.getCollectibleIndex(dnsItem1.address);
         const unpackResult = await bundle.sendUnpack(
             owner.getSender(),
             domainIndex
@@ -536,7 +536,7 @@ describe("Bundle", () => {
             MIN_BALANCE - toNano("0.01")
         );
 
-        const domainIndex = await bundle.getDomainIndex(dnsItem3.address);
+        const domainIndex = await bundle.getCollectibleIndex(dnsItem3.address);
         const unpackResultNo = await bundle.sendUnpack(
             owner.getSender(),
             domainIndex,
@@ -551,7 +551,7 @@ describe("Bundle", () => {
         });
     });
     it("should unpack if enough for filling", async () => {
-        const domainIndex = await bundle.getDomainIndex(dnsItem3.address);
+        const domainIndex = await bundle.getCollectibleIndex(dnsItem3.address);
         const unpackResult = await bundle.sendUnpack(
             owner.getSender(),
             domainIndex,
