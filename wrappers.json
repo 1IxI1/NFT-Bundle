@@ -1,110 +1,110 @@
 {
-  "Bundle": {
-    "sendFunctions": {
-      "sendDeploy": {
-        "value": {
-          "type": "bigint"
-        }
-      },
-      "sendTransfer": {
-        "to": {
-          "type": "Address"
-        },
-        "response": {
-          "type": "Address"
-        },
-        "forwardAmount": {
-          "type": "bigint",
-          "defaultValue": "toNano(\"0.01\")"
-        },
-        "value": {
-          "type": "bigint",
-          "optional": true
-        },
-        "customPayload": {
-          "type": "Cell",
-          "optional": true
-        },
-        "forwardPayload": {
-          "type": "Cell",
-          "optional": true
-        }
-      },
-      "sendAddItem": {
-        "item": {
-          "type": "Address"
-        },
-        "value": {
-          "type": "bigint",
-          "defaultValue": "toNano(\"0.02\")"
-        }
-      },
-      "sendChangeRecordReq": {
-        "index": {
-          "type": "number"
-        },
-        "key": {
-          "type": "bigint"
-        },
-        "value": {
-          "type": "Cell",
-          "optional": true
-        },
-        "tons": {
-          "type": "bigint",
-          "defaultValue": "toNano(\"0.1\")"
-        }
-      },
-      "sendTouch": {
-        "index": {
-          "type": "number"
-        },
-        "allowMinReward": {
-          "type": "boolean"
-        },
-        "value": {
-          "type": "bigint",
-          "defaultValue": "toNano(\"0.1\")"
-        }
-      },
-      "sendUnpack": {
-        "index": {
-          "type": "number"
-        },
-        "value": {
-          "type": "bigint",
-          "defaultValue": "toNano(\"0.15\")"
-        }
-      },
-      "sendUnpackAll": {
-        "value": {
-          "type": "bigint",
-          "defaultValue": "toNano(\"1\")"
-        }
-      }
-    },
-    "getFunctions": {
-      "getCollectibles": {},
-      "getDomainIndex": {
-        "target": {
-          "type": "Address"
-        }
-      },
-      "getNFTData": {},
-      "getOwnerAddress": {}
-    },
-    "path": "./wrappers/Bundle.ts",
-    "deploy": {
-      "canBeCreatedFromConfig": true,
-      "configType": {
-        "owner": {
-          "type": "Address"
-        },
-        "collectibles": {
-          "type": "Address[]"
-        }
-      },
-      "codeHex": "b5ee9c7241021501000513000114ff00f4a413f4bcf2c80b01020162050202016a0403001db5d87da89a1a60fe809f48060606300043b5f9fda89a1a60fe809f4806002f1e91cdf4ad82523492460e1c4b174fedab006db004b4d020c700925f04e001d0d3030171b0925f04e0fa40fa4031fa003171d721fa0031fa0030ed44d0d307f404fa403005d31fd33f22821005138d91bae3022282103b45b2d6bae3022282105fcc3d14bae30235218210855965fcba1413100604fe8edf315145c705f2e15f02d30730530278f40e6fa120f2e16227821008583b00bef2e16601fa40d2003096301027343530e30d91018e1c22a42178f40e6fa12097524378f41603a49831523278f45b3003e203e83202c8cb07f40001cf16c9ed54e03720821039e2f30bbae3022082105eb1f0f9bae30232348210111111110f0d0c070112bae3025f05840ff2f00803fcd307d20030820bca758021917196821015752a00e2a016bef2e1655878f40e6fa1f2e162fa40d20001f2e164d32f308209b9a680a0f823bbf2e16382084c4b4070246d71c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb00820afaf08070fb02821015752a0003e30f130b0a09006afb02708210e64387ec586d8306c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb0000027100027300f830365123c705f2e15fd307531578f40e6fa1f2e162fa40d20030f2e16401d3ff01c8cbff01cf1670220782104eb1f0f940138040c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb00f8237fc85006cf1615ca0014cb2f403478f4435802c8cb07f40001cf16c9ed5401f63032355112c705f2e15f2078f48e6fa521a417baf2e16491058e4dfa403022820afaf0807126c8801001cb055005cf1658fa027020c882105fcc3d1401cb1f500601cb3f24cf165004cf1614cb0022fa0212cb00c9127158cb6accc901fb00513378f47e6fa54555e85b32706d2302c8cb07f40001cf16c9ed54700e00668210d53276db586d8100a0c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb0000da28804009a1820afaf080b98e19370782100b532b80bef2e165820afaf08070fb0210568306069138e210277026034186c8801001cb055005cf1658fa027020c882105fcc3d1401cb1f500601cb3f24cf165004cf1614cb0022fa0212cb00c9127158cb6accc901fb0004a5503402ba32375145c705f2e15f0604435302fa40fa40f404fa003223fa4430c000f2e14d07820afaf080a127945375a0a1de22d70b01c300209206a19136e220c2fff2e16627941027365be30d0293135f03e30d1202c8cb07f40001cf16c9ed541211007823fa4430c000f2e14d43308210d53276db016d71c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb000084821005138d91c85008cf1658cf1671245146104a10395092c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb0010340076355b35355112c705f2e15ffa40302278f48e6fa56c1291a4923070e27070c85004cf1613ca0012cb2f401378f4430102c8cb07f40001cf16c9ed5400a85f033234342378f48e6fa521a45260b9f2e160908e2c01fa405313c7058e1ad20030f2d161f8237fc85003cf1612ca00cb2f401578f4430370915be22478f47e6fa5e85f0301a45902c8cb07f40001cf16c9ed545a12f08f"
-    }
-  }
+	"Bundle": {
+		"sendFunctions": {
+			"sendDeploy": {
+				"value": {
+					"type": "bigint"
+				}
+			},
+			"sendTransfer": {
+				"to": {
+					"type": "Address"
+				},
+				"response": {
+					"type": "Address"
+				},
+				"forwardAmount": {
+					"type": "bigint",
+					"defaultValue": "toNano(\"0.01\")"
+				},
+				"value": {
+					"type": "bigint",
+					"optional": true
+				},
+				"customPayload": {
+					"type": "Cell",
+					"optional": true
+				},
+				"forwardPayload": {
+					"type": "Cell",
+					"optional": true
+				}
+			},
+			"sendAddItem": {
+				"item": {
+					"type": "Address"
+				},
+				"value": {
+					"type": "bigint",
+					"defaultValue": "toNano(\"0.02\")"
+				}
+			},
+			"sendChangeRecordReq": {
+				"index": {
+					"type": "number"
+				},
+				"key": {
+					"type": "bigint"
+				},
+				"value": {
+					"type": "Cell",
+					"optional": true
+				},
+				"tons": {
+					"type": "bigint",
+					"defaultValue": "toNano(\"0.1\")"
+				}
+			},
+			"sendTouch": {
+				"index": {
+					"type": "number"
+				},
+				"allowMinReward": {
+					"type": "boolean"
+				},
+				"value": {
+					"type": "bigint",
+					"defaultValue": "toNano(\"0.1\")"
+				}
+			},
+			"sendUnpack": {
+				"index": {
+					"type": "number"
+				},
+				"value": {
+					"type": "bigint",
+					"defaultValue": "toNano(\"0.15\")"
+				}
+			},
+			"sendUnpackAll": {
+				"value": {
+					"type": "bigint",
+					"defaultValue": "toNano(\"1\")"
+				}
+			}
+		},
+		"getFunctions": {
+			"getCollectibles": {},
+			"getCollectibleIndex": {
+				"target": {
+					"type": "Address"
+				}
+			},
+			"getNFTData": {},
+			"getOwnerAddress": {}
+		},
+		"path": "./wrappers/Bundle.ts",
+		"deploy": {
+			"canBeCreatedFromConfig": true,
+			"configType": {
+				"owner": {
+					"type": "Address"
+				},
+				"collectibles": {
+					"type": "Address[]"
+				}
+			},
+			"codeHex": "b5ee9c7241021501000513000114ff00f4a413f4bcf2c80b01020162050202016a0403001db5d87da89a1a60fe809f48060606300043b5f9fda89a1a60fe809f4806002f1e91cdf4ad82523492460e1c4b174fedab006db004b4d020c700925f04e001d0d3030171b0925f04e0fa40fa4031fa003171d721fa0031fa0030ed44d0d307f404fa403005d31fd33f22821005138d91bae3022282103b45b2d6bae3022282105fcc3d14bae30235218210855965fcba1413100604fe8edf315145c705f2e15f02d30730530278f40e6fa120f2e16227821008583b00bef2e16601fa40d2003096301027343530e30d91018e1c22a42178f40e6fa12097524378f41603a49831523278f45b3003e203e83202c8cb07f40001cf16c9ed54e03720821039e2f30bbae3022082105eb1f0f9bae30232348210111111110f0d0c070112bae3025f05840ff2f00803fcd307d20030820bca758021917196821015752a00e2a016bef2e1655878f40e6fa1f2e162fa40d20001f2e164d32f308209b9a680a0f823bbf2e16382084c4b4070246d71c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb00820afaf08070fb02821015752a0003e30f130b0a09006afb02708210e64387ec586d8306c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb0000027100027300f830365123c705f2e15fd307531578f40e6fa1f2e162fa40d20030f2e16401d3ff01c8cbff01cf1670220782104eb1f0f940138040c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb00f8237fc85006cf1615ca0014cb2f403478f4435802c8cb07f40001cf16c9ed5401f63032355112c705f2e15f2078f48e6fa521a417baf2e16491058e4dfa403022820afaf0807126c8801001cb055005cf1658fa027020c882105fcc3d1401cb1f500601cb3f24cf165004cf1614cb0022fa0212cb00c9127158cb6accc901fb00513378f47e6fa54555e85b32706d2302c8cb07f40001cf16c9ed54700e00668210d53276db586d8100a0c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb0000da28804009a1820afaf080b98e19370782100b532b80bef2e165820afaf08070fb0210568306069138e210277026034186c8801001cb055005cf1658fa027020c882105fcc3d1401cb1f500601cb3f24cf165004cf1614cb0022fa0212cb00c9127158cb6accc901fb0004a5503402ba32375145c705f2e15f0604435302fa40fa40f404fa003223fa4430c000f2e14d07820afaf080a127945375a0a1de22d70b01c300209206a19136e220c2fff2e16627941027365be30d0293135f03e30d1202c8cb07f40001cf16c9ed541211007823fa4430c000f2e14d43308210d53276db016d71c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb000084821005138d91c85008cf1658cf1671245146104a10395092c8801001cb055006cf165004fa027001cb6a5801cb1f0101cb3f216eb39301cf179131e2c901fb0010340076355b35355112c705f2e15ffa40302278f48e6fa56c1291a4923070e27070c85004cf1613ca0012cb2f401378f4430102c8cb07f40001cf16c9ed5400a85f033234342378f48e6fa521a45260b9f2e160908e2c01fa405313c7058e1ad20030f2d161f8237fc85003cf1612ca00cb2f401578f4430370915be22478f47e6fa5e85f0301a45902c8cb07f40001cf16c9ed545a12f08f"
+		}
+	}
 }
