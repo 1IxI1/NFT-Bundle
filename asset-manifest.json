@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "https://1ixi1.github.io/NFT-Bundle/static/css/main.f20c3a7d.css",
-    "main.js": "https://1ixi1.github.io/NFT-Bundle/static/js/main.5ea8e7a4.js",
+    "main.js": "https://1ixi1.github.io/NFT-Bundle/static/js/main.d3936ead.js",
     "index.html": "https://1ixi1.github.io/NFT-Bundle/index.html",
     "main.f20c3a7d.css.map": "https://1ixi1.github.io/NFT-Bundle/static/css/main.f20c3a7d.css.map",
-    "main.5ea8e7a4.js.map": "https://1ixi1.github.io/NFT-Bundle/static/js/main.5ea8e7a4.js.map"
+    "main.d3936ead.js.map": "https://1ixi1.github.io/NFT-Bundle/static/js/main.d3936ead.js.map"
   },
   "entrypoints": [
     "static/css/main.f20c3a7d.css",
-    "static/js/main.5ea8e7a4.js"
+    "static/js/main.d3936ead.js"
   ]
 }

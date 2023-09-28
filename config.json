@@ -1,136 +1,155 @@
 {
-	"Bundle": {
-		"defaultAddress": "",
-		"tabName": "",
-		"sendFunctions": {
-			"sendDeploy": {
-				"tabName": "Deploy",
-				"params": {
-					"value": {
-						"fieldTitle": "TONs"
-					}
-				}
-			},
-			"sendTransfer": {
-				"tabName": "Transfer Bundle (as NFT)",
-				"params": {
-					"to": {
-						"fieldTitle": "Destination"
-					},
-					"response": {
-						"fieldTitle": "Excesses"
-					},
-					"forwardAmount": {
-						"fieldTitle": "TONs for receiver",
-						"overrideWithDefault": false
-					},
-					"value": {
-						"fieldTitle": "Total TONs",
-						"overrideWithDefault": false
-					},
-					"customPayload": {
-						"fieldTitle": "Payload for item",
-						"overrideWithDefault": true
-					},
-					"forwardPayload": {
-						"fieldTitle": "Payload for receiver",
-						"overrideWithDefault": false
-					}
-				}
-			},
-			"sendAddItem": {
-				"tabName": "Add Item",
-				"params": {
-					"item": {
-						"fieldTitle": "Item"
-					},
-					"value": {
-						"fieldTitle": "TONs",
-						"overrideWithDefault": false
-					}
-				}
-			},
-			"sendChangeRecordReq": {
-				"tabName": "Change DNS Record",
-				"params": {
-					"index": {
-						"fieldTitle": "Item index"
-					},
-					"key": {
-						"fieldTitle": "DNS Key"
-					},
-					"value": {
-						"fieldTitle": "DNS Value",
-						"overrideWithDefault": false
-					},
-					"tons": {
-						"fieldTitle": "TONs",
-						"overrideWithDefault": false
-					}
-				}
-			},
-			"sendTouch": {
-				"tabName": "Touch domain",
-				"params": {
-					"index": {
-						"fieldTitle": "Item index"
-					},
-					"allowMinReward": {
-						"fieldTitle": "Allow reward less than 0.36 TON"
-					},
-					"value": {
-						"fieldTitle": "TONs",
-						"overrideWithDefault": false
-					}
-				}
-			},
-			"sendUnpack": {
-				"tabName": "Unpack item",
-				"params": {
-					"index": {
-						"fieldTitle": "Item index"
-					},
-					"value": {
-						"fieldTitle": "TONs",
-						"overrideWithDefault": false
-					}
-				}
-			},
-			"sendUnpackAll": {
-				"tabName": "Unpack all & destroy",
-				"params": {
-					"value": {
-						"fieldTitle": "TONs",
-						"overrideWithDefault": false
-					}
-				}
-			}
-		},
-		"getFunctions": {
-			"getCollectibles": {
-				"tabName": "Get items",
-				"params": {},
-				"outNames": ["items"]
-			},
-			"getCollectibleIndex": {
-				"tabName": "Find item index",
-				"params": {
-					"target": {
-						"fieldTitle": "Item address"
-					}
-				},
-				"outNames": ["index"]
-			},
-			"getNFTData": {
-				"tabName": "Get NFT data",
-				"params": {},
-				"outNames": []
-			},
-			"getOwnerAddress": {
-				"tabName": "Get owner address",
-				"params": {},
-				"outNames": []
-			}
-		}
-	}
+  "Bundle": {
+    "defaultAddress": "",
+    "tabName": "",
+    "sendFunctions": {
+      "sendDeploy": {
+        "tabName": "Deploy",
+        "params": {
+          "value": {
+            "fieldTitle": "TONs"
+          }
+        }
+      },
+      "sendTransfer": {
+        "tabName": "Transfer Bundle (as NFT)",
+        "params": {
+          "to": {
+            "fieldTitle": "Destination"
+          },
+          "response": {
+            "fieldTitle": "Excesses"
+          },
+          "forwardAmount": {
+            "fieldTitle": "TONs for receiver",
+            "overrideWithDefault": false
+          },
+          "value": {
+            "fieldTitle": "Total TONs",
+            "overrideWithDefault": false
+          },
+          "customPayload": {
+            "fieldTitle": "Payload for item",
+            "overrideWithDefault": true
+          },
+          "forwardPayload": {
+            "fieldTitle": "Payload for receiver",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendAddItem": {
+        "tabName": "Add Item",
+        "params": {
+          "item": {
+            "fieldTitle": "Item"
+          },
+          "value": {
+            "fieldTitle": "TONs",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendChangeRecordReq": {
+        "tabName": "Change DNS Record",
+        "params": {
+          "index": {
+            "fieldTitle": "Item index"
+          },
+          "key": {
+            "fieldTitle": "DNS Key"
+          },
+          "value": {
+            "fieldTitle": "DNS Value",
+            "overrideWithDefault": false
+          },
+          "tons": {
+            "fieldTitle": "TONs",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendTouch": {
+        "tabName": "Touch domain",
+        "params": {
+          "index": {
+            "fieldTitle": "Item index"
+          },
+          "allowMinReward": {
+            "fieldTitle": "Allow reward less than 0.36 TON"
+          },
+          "value": {
+            "fieldTitle": "TONs",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendUnpack": {
+        "tabName": "Unpack item",
+        "params": {
+          "index": {
+            "fieldTitle": "Item index"
+          },
+          "value": {
+            "fieldTitle": "TONs",
+            "overrideWithDefault": false
+          }
+        }
+      },
+      "sendUnpackAll": {
+        "tabName": "Unpack all & destroy",
+        "params": {
+          "value": {
+            "fieldTitle": "TONs",
+            "overrideWithDefault": false
+          }
+        }
+      }
+    },
+    "getFunctions": {
+      "getCollectibles": {
+        "tabName": "Collectibles",
+        "params": {},
+        "outNames": {
+          "0": "items"
+        }
+      },
+      "getCollectibleIndex": {
+        "tabName": "Find item index",
+        "params": {
+          "target": {
+            "fieldTitle": "Item address"
+          }
+        },
+        "outNames": {
+          "0": "index"
+        }
+      },
+      "getNFTData": {
+        "tabName": "NFT data",
+        "params": {},
+        "outNames": ["init", "index", "collection", "owner", "content"]
+      },
+      "getOwnerAddress": {
+        "tabName": "Owner",
+        "params": {},
+        "outNames": []
+      },
+      "getTouchPeriod": {
+        "tabName": "Touch period",
+        "params": {},
+        "outNames": []
+      },
+      "getMaxReward": {
+        "tabName": "Reward",
+        "params": {},
+        "outNames": []
+      },
+      "getTouchGas": {
+        "tabName": "Touch gas",
+        "params": {},
+        "outNames": []
+      }
+    }
+  }
 }
