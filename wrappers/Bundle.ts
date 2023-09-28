@@ -9,10 +9,11 @@ import {
     SendMode,
     Dictionary,
     DictionaryValue,
-    TupleBuilder,
     toNano,
 } from "@ton/core";
 import { Op } from "./Ops";
+
+export const MIN_BALANCE = toNano("0.05");
 
 export type BundleConfig = {
     owner: Address;
@@ -253,6 +254,11 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
 
     async getMaxReward(provider: ContractProvider) {
         const { stack } = await provider.get("get_max_reward", []);
+        return stack.readBigNumber();
+    }
+
+    async getTouchGas(provider: ContractProvider) {
+        const { stack } = await provider.get("get_touch_gas_consumption", []);
         return stack.readBigNumber();
     }
 }

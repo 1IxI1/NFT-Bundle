@@ -7,7 +7,7 @@
   contracts https://github.com/ton-blockchain/dns-contract.
 -}
 
-#include "imports/stdlib.fc";
+#include "stdlib.fc";
 #include "messages.fc";
 #include "common.fc";
 
@@ -286,6 +286,10 @@ int get_touch_period() method_id {
 
 int get_max_reward() method_id {
     return reward;
+}
+
+int get_touch_gas_consumption() method_id {
+    return touch_gas;
 }
 
 (int, int, slice, slice, cell) get_nft_data() method_id {

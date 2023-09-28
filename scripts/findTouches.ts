@@ -1,8 +1,6 @@
-import { Address, fromNano, toNano } from "@ton/core";
-import { Bundle } from "../wrappers/Bundle";
+import { Address, fromNano } from "@ton/core";
+import { Bundle, MIN_BALANCE } from "../wrappers/Bundle";
 import { NetworkProvider } from "@ton/blueprint";
-
-const MIN_BALANCE = toNano("0.05");
 
 export async function run(provider: NetworkProvider, args: string[]) {
     const ui = provider.ui();
