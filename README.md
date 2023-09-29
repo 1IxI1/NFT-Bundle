@@ -4,6 +4,11 @@ A contract that owns several NFT Items, allowing you to transfer them and manage
 
 With add-on for acting with ".ton" and similar [contracts](https://github.com/ton-blockchain/dns-contract).
 
+<img width=66% src="https://github.com/1IxI1/NFT-Bundle/assets/53380262/ad52505a-2c00-4129-bbda-78d74ea499e5"/>
+
+## TON DNS Extension
+<img width=66% src="https://github.com/1IxI1/NFT-Bundle/assets/53380262/030bad50-af33-4b73-8c67-698eeebf94b9"/>
+
 
 ## Usage
 You can use [the Dapp](https://1ixi1.github.io/NFT-Bundle)
