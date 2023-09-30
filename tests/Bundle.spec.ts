@@ -141,6 +141,23 @@ describe("Bundle", () => {
         expect(domain1?.lastTouched).toBe(blockchain.now);
         expect(domain1?.itemAddress.equals(dnsItem1.address)).toBe(true);
     });
+    it("should not touch uninited domain", async () => {
+        const collectibles = await bundle.getCollectibles();
+        const domain2 = collectibles.get(1);
+        expect(domain2?.init).toBe(false);
+        expect(domain2?.lastTouched).toBe(0);
+        const touchResult = await bundle.sendTouch(
+            toucher.getSender(),
+            1,
+            true
+        );
+        expect(touchResult.transactions).toHaveTransaction({
+            on: bundle.address,
+            op: Op.touch,
+            success: false,
+            exitCode: Errors.not_inited,
+        });
+    });
     it("should init the second domain", async () => {
         blockchain.now = 130;
         const transferResult = await dnsItem2.sendTransfer(
