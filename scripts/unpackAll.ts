@@ -14,25 +14,25 @@ export async function run(provider: NetworkProvider, args: string[]) {
     const bundleAddress = Address.parse(
         args.length > 0 ? args[0] : await ui.input("Bundle address")
     );
-    const itemAddress = Address.parse(
-        args.length > 1 ? args[1] : await ui.input("Item address")
-    );
 
     const bundle = provider.open(Bundle.createFromAddress(bundleAddress));
 
-    const itemIndex = await bundle.getCollectibleIndex(itemAddress);
-    if (itemIndex === -1) {
-        throw new Error("Item is not in the bundle");
+    const items = await bundle.getCollectibles();
+    if (items.size == 0) {
+        ui.write("The bundle is empty");
+        return;
     }
 
-    await bundle.sendUnpack(provider.sender(), itemIndex);
-    const unpackSucc = await waitForTransaction(provider, bundleAddress, 10);
+    await bundle.sendUnpackAll(provider.sender());
+    let unpackSucc = await waitForTransaction(provider, bundleAddress, 10);
+    const { last } = await provider.api().getLastBlock();
+    const { account } = await provider
+        .api()
+        .getAccount(last.seqno, bundleAddress);
+    unpackSucc = unpackSucc && account.balance.coins == "0";
     if (!unpackSucc) {
         ui.write("Failed to execute unpack transaction");
         return;
     }
-
-    const newItemIndex = await bundle.getCollectibleIndex(itemAddress);
-    if (newItemIndex !== -1) ui.write("Failed to unpack the item.");
-    else ui.write("Succesfully unpacked " + itemAddress.toString());
+    ui.write("Succesfully unpacked all items");
 }

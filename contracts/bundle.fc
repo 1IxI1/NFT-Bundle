@@ -20,10 +20,10 @@ const int touch_amount = 5000000; ;; 0.005 TON
 const int touch_period = 28944000; ;; 11 months in seconds
 
 {- storage scheme:
-    dns_item#_ address:MsgAddress inited:Bool last_touch:uint48 = DNSItem;
+  collectible#_ address:MsgAddress inited:Bool last_touch:uint48 = Item;
 
-    storage#_ inited_count:uint8 collectibles:(HashmapE 8 DNSItem)
-              owner:MsgAddress = Storage;
+  storage#_ inited_count:uint8 collectibles:(HashmapE 8 Item)
+            owner:MsgAddress = Storage;
 -}
 
 ;; inited_count, collectibles, owner
