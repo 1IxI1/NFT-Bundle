@@ -1,6 +1,7 @@
 # TON NFT Bundle Contract
 
-A contract that owns several NFT Items, allowing you to transfer them and manage them as a package.
+A contract that owns several [NFT Items](https://github.com/ton-blockchain/TEPs/blob/master/text/0062-nft-standard.md),
+allowing you to transfer them and manage them as a package.
 
 With add-on for acting with ".ton" and similar [contracts](https://github.com/ton-blockchain/dns-contract).
 
