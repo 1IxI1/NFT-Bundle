@@ -1,3 +1,9 @@
+{-
+  TON NFT Bundle Contract
+  In this file we define constants
+  and very basic functions.
+-}
+
 #include "stdlib.fc";
 #include "messages.fc";
 
