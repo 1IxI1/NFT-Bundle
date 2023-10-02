@@ -1,5 +1,5 @@
 import { Blockchain, SandboxContract, TreasuryContract } from "@ton/sandbox";
-import { Cell, fromNano, toNano } from "@ton/core";
+import { Cell, beginCell, fromNano, toNano } from "@ton/core";
 import { Bundle } from "../wrappers/Bundle";
 import { DNSItemContract } from "../wrappers/DNSItem";
 import "@ton/test-utils";
@@ -410,6 +410,29 @@ describe("Bundle", () => {
     it("should give the new owner address", async () => {
         const data = await bundle.getNFTData();
         expect(data.owner.equals(newOwner.address)).toBe(true);
+    });
+    it("shoudl report static data", async () => {
+        const reportRes = await bundle.sendGetStaticData(toucher.getSender());
+        expect(reportRes.transactions).toHaveTransaction({
+            from: toucher.address,
+            to: bundle.address,
+            op: Op.get_static_data,
+            success: true,
+            outMessagesCount: 1,
+        });
+        expect(reportRes.transactions).toHaveTransaction({
+            from: bundle.address,
+            to: toucher.address,
+            op: Op.report_static_data,
+            success: true,
+            // index & collection address
+            body: beginCell()
+                .storeUint(Op.report_static_data, 32)
+                .storeUint(0, 64) // query id
+                .storeUint(0, 256)
+                .storeAddress(null)
+                .endCell(),
+        });
     });
     it("should transfer back", async () => {
         await bundle.sendTransfer(

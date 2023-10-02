@@ -200,7 +200,10 @@ slice transfer_ownership(int my_balance, slice owner, slice in_msg_body, int que
         throw_unless(errors::not_inited, inited_count == total_collectibles);
         while (succ?) {
             slice addr = last_data~load_msg_addr();
-            send_transfer(addr, owner, unpack_transfer_amount, mode::PAY_FEES_SEPARATELY, query_id);
+            int init? = last_data~load_int(1);
+            if (init?) {
+                send_transfer(addr, owner, unpack_transfer_amount, mode::PAY_FEES_SEPARATELY, query_id);
+            }
             (item_id, last_data, succ?) = collectibles.udict_get_prev?(8, item_id);
         }
         save_data(0, null(), owner);
@@ -272,6 +275,12 @@ slice transfer_ownership(int my_balance, slice owner, slice in_msg_body, int que
         return ();
     }
 
+    ;; get_static_data#2fcb26a2 query_id:uint64 = InternalMsgBody;
+    if (op == op::get_static_data) {
+        send_msg(sender_address, 0, op::report_static_data, query_id, begin_cell().store_uint(0, 256).store_uint(0, 2), mode::CARRY_REMAINING_GAS);
+        return ();
+    }
+
     throw(errors::unknown_op);
 }
 
@@ -297,5 +306,5 @@ int get_touch_gas_consumption() method_id {
     (int last_item_id, _, int succ?) = collectibles.udict_get_max?(8);
     int total_collectibles = succ? ? last_item_id + 1 : 0;
     int all_init? = total_collectibles == inited_count;
-    return (all_init?, -1, null(), owner, null());
+    return (all_init?, 0, null(), owner, null());
 }

@@ -9,4 +9,6 @@ export abstract class Op {
     static readonly unpack = 0x855965fc;
     static readonly unpack_all = 0x39e2f30b;
     static readonly touch = 0x11111111;
+    static readonly get_static_data = 0x2fcb26a2;
+    static readonly report_static_data = 0x8b771735;
 }

@@ -209,6 +209,20 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
                 .endCell(),
         });
     }
+    async sendGetStaticData(
+        provider: ContractProvider,
+        via: Sender,
+        value = toNano("0.02")
+    ) {
+        await provider.internal(via, {
+            value,
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Op.get_static_data, 32)
+                .storeUint(0, 64)
+                .endCell(),
+        });
+    }
 
     async getCollectibles(provider: ContractProvider) {
         const { stack } = await provider.get("get_collectibles", []);
