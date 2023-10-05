@@ -10,6 +10,7 @@
 #include "stdlib.fc";
 #include "messages.fc";
 #include "common.fc";
+#include "reserve.fc";
 
 const int min_balance = 50000000; ;; 0.05 TON
 const int reward = 360000000; ;; 0.36 TON

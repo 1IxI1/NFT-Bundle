@@ -30,23 +30,6 @@ const int errors::not_enough_balance = 357;
 const int errors::not_enough_tons = 358;
 const int errors::unknown_op = 0xffff;
 
-;; equivalent of sending a message with x TONs
-const int reserve::this_amount = 0;
-;; equivalent of sending a message with almost whole balance but leaving x TONs, and if balance is less than x - throw error
-const int reserve::leave_this_amount = 1;
-;; equivalent of sending a message with x TONs, and if not enough - sending with all avaliable coins
-const int reserve::at_most_this_amount = 2;
-;; equivalent of sending a message with almost whole balance but leaving x TONs, and if balance is less than x - do nothing
-const int reserve::leave_max_this_amount = 3;
-;; equivalent of receiving a message with x TONs
-const int reserve::add_this_amount = 8;
-;; equivalent of receiving a message with (current balance) - x TONs
-const int reserve::add_balance_minus_this_amount = 9;
-;; equivalent of sending a message with (balance before msg) + x TONs
-const int reserve::b_balance_plus_this_amount = 4; 
-;; equivalent of leaving on contract (balance before msg) + x TONs and sending a message with the rest
-const int reserve::leave_b_balance_plus_this_amount = 5; 
-
 (slice, slice, cell, int, slice) unpack_nft_cmd_transfer(slice cs) inline {
     return (
         cs~load_msg_addr(),
