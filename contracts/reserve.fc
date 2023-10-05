@@ -20,11 +20,3 @@ const int reserve::leave_bbalance_minus_this_amount = 13;
 ;;
 ;;     adding 2 to them will just disable errors
 ;;     in action phase if balance is not enough
-
-;; DONT WORK: (in any use case)
-;;    adding to balance x TONs
-;; const int add_this_amount = 8;
-;;
-;;    adding to balance (current balance - x) TONs
-;; const int add_balance_minus_this_amount = 9;
-
