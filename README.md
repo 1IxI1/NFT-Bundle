@@ -113,65 +113,48 @@ Will beautifully print collectibles hashmap for given bundle as table.
 
 ### Items hashmap
 
-Предметы - DNS или NFT Items - хранятся в контракте в виде хэшмапы
-следующего вида:
+Collectibles - DNS or NFT Items - are stored in the contract in the form of hashmaps of the following type:
 
 ```
 collectible#_ address:MsgAddress inited:Bool last_touch:uint48 = Item;
 ... collectibles:(HashmapE 8 Item) ...
 ```
 
-`inited` - маркер, показывающий владеет ли Bundle контракт предметом или
-ещё нет.
+`inited` is a marker indicating whether the Bundle contract owns the item or not yet.
 
-По задумке, при создании контракта, указанные в нем предметы должны быть
-в неинициализированном состояниии `inited=0`.
+According to the idea, when creating a contract, the items specified in it should be in the uninitialized state `inited = 0`.
 
-Когда трансфер предмета происходит успешно и Bundle получает от одного из
-предметов сообщение с `op::ownership_assigned` - `inited` у этого предмета
-переходит в `true`, т.е. становится равным `-1`.
+When the transfer of the item is successful and the Bundle receives a message from one of the items with `op::ownership_assigned` - `inited` for this item goes to `true`, i.e. it becomes equal to `-1`.
 
-При этом же трансфере `last_touch` у предмета становится равным текущей
-дате.
+With the same transfer, the item's `last_touch` becomes equal to the current date.
 
-Хэшмапу с предметами можно получить с помощью get метода
-`get_collectibles`.
+Hashmap with items can be obtained using the get method `get_collectibles`.
 
-Пример получения и обработки данных с помощью этого метода можно найти
-в скрипте [getCollectibles.ts](scripts/getCollectibles.ts).
+An example of receiving and processing data using this method can be found in the script [getCollectibles.ts](scripts/getCollectibles.ts).
 
-Для совершения действий `touch`, `unpack`, `change_dns_record_req`
-в сообщении нужно указать индекс предмета в хэшмапе. Это можно сделать,
-проитерировав хэшмапу, полученную от контракта. Пример поиска можно
-увидеть в [wrappers/Bundle.ts](wrappers/Bundle.ts).
+To perform the actions `touch`, `unpack`, `change_dns_record_req`, you need to _specify the index_ of the item you want to work with in the message. Index can be acquired by iterating the hashmap received from contract. An example of the search can be found in [wrappers/Bundle.ts](wrappers/Bundle.ts).
 
 #### Adding items
 
-Чтобы добавить в словарь новый предмет (им может быть любой контракт,
-воплощающий
-[TEP-64](https://github.com/ton-blockchain/TEPs/blob/master/text/0062-nft-standard.md#nft-item-smart-contract)),
-владельцу нужно отправить на контракт сообщение следующего вида:
+To add a new collectible to the dictionary (item should implement [TEP-64](https://github.com/ton-blockchain/TEPs/blob/master/text/0062-nft-standard.md#nft-item-smart-contract)), owner needs to send the following message to contract:
 
 ```
 add_item#3b45b2d6 query_id:uint64 item_address:MsgAddress = InternalMsgBody;
 ```
 
-После этого неинициализированный предмет появится в словаре.
+After that, the uninitialized item will appear in the dictionary.
 
 #### Unpacking
 
-Распаковкой называется удаление предмета из хранилища контракта и,
-если он инициализирован, передача предмета от контракта к владельцу.
+Unpacking is the removal of an item from the contract dictionary and, if it is initialized, the transfer of the item from the contract to the owner.
 
-Для распаковки одного элемента владелец отправляет на контракт
-сообщение с индексом предмета для распаковки:
+To unpack one item, the owner sends a message to the contract with the index of the item to unpack:
 
 ```
 unpack#855965fc query_id:uint64 target_index:uint8 = InternalMsgBody;
 ```
 
-А после следующего сообщения контракт отправит владельцу все предметы
-и остаток своего баланса, после чего самоуничтожится:
+And after the message in the following form, the contract will send all the items and the rest of its balance to the owner, and after it will self-destruct:
 
 ```
 unpack_all#39e2f30b query_id:uint64 = InternalMsgBody;
@@ -179,12 +162,11 @@ unpack_all#39e2f30b query_id:uint64 = InternalMsgBody;
 
 ### DNS Extension interfaces
 
-Как сказано выше, в контракте есть интерфейсы для работы с доменами.
+As mentioned above, the contract has interfaces for working with domains.
 
 #### Changing records
 
-Поменять ключ в одном из доменов, котрыми владеет Bundle, можно с помощью
-внутреннего сообщения вида `change_dns_record_req`.
+You can change the key in one of the domains owned by Bundle using an internal message of the form `change_dns_record_req`.
 
 ```
 change_dns_record_req#5eb1f0f9 query_id:uint64 target_index:uint8
@@ -192,120 +174,77 @@ change_dns_record_req#5eb1f0f9 query_id:uint64 target_index:uint8
                                = InternalMsgBody;
 ```
 
-Эта схема почти ничем не отличается от обычного запроса к домену
-`change_dns_record`. Только в этом сообщении после `query_id` передается
-`target_index` - индекс предмета в хэшмапе. Это, как можно догадаться,
-нужно контракту для определения предмета, ключ которого нужно изменить (не
-менять же у всех).
+This scheme is almost no different from the usual request to the domain `change_dns_record`. Except that in this message, after `query_id`, `target_index` is passed - the index of the item in the hashmap. This, as you might guess, is necessary for the contract to determine the subject whose key needs to be changed (not to change at all).
 
-После всех проверок контракт отсылает `change_dns_record` классического
-вида на адрес указанного домена. И, так как DNS предметы при таком
-действии продляются, контракт тоже обновляет дату их `last_touch`.
+After all checks, the contract sends the `change_dns_record` of the classic form to the address of the specified domain. And, since the DNS items with such an action increases the expiration date, the Bundle contract also updates the value of their `last_touch`.
 
-> Важное замечание: Bundle контракт не может проверить точно чем
-> завершится смена ключа на контракте домена. Возможен случай, что
-> `content` на домене не будет содержать словаря, или что записей в этом
-> словаре будет слишком много или что-нибудь другое. Тогда транзакция на
-> предмете завершится с ошибкой и домен не продлится. Однако `last_touch`
-> на Bundle контракте для этого предмета уже будет установлен на текущую
-> дату. Это нарушит механизм награды за продление домена и в теории может
-> привести к потере домена. Поэтому всегда проверяйте успешность полной
-> цепочки транзакций.
+> Important note: The Bundle contract cannot verify exactly how the key change on the domain contract will end. It is possible that the `content` on the domain will not contain a dictionary, or that there will be too many entries in this dictionary, or something else. Then the transaction on the item will fail with an error and the domain will not update its expiration date. However, the `last_touch` on the Bundle contract for this item will already be set to the current date. This will disrupt the reward mechanism for domain renewal and, in theory, may lead to the loss of the domain. Therefore, **always check the success of the complete transaction chain**.
 
 #### Renewing system
 
-Стандартные домены TON DNS имеют срок истечения в 1 год. Это значит, что
-если купленный домен не продляли в течение года, кто угодно может
-выставить его на аукцион. Владелец домена в таком случае рискует потерять
-деньги и/или средства.
+Standard TON DNS domains have an expiration date of _1 year_. This means that if the purchased domain has not been renewed within a year, anyone can put it up for auction. In this case, the domain owner risks losing funds and/or the domain.
 
-<i>Bundle контракт позволяет третьим лицам продлять домены за награду.</i>
+<i>Bundle contract allows third parties to renew domains for a reward.</i>
 
-Это значит, что по истечении 11 месяцев (параметр можно изменить [в
-коде](contracts/bundle.fc#L20) перед деплоем), кто угодно может отправить
-на контракт сообщение-касание и получить награду, если на контракте есть
-деньги.
+This means that after _11 months_ (the parameter can be changed [in the code](contracts/bundle.fc#L20) before the deployment), anyone can send a touch message to the contract and receive a reward if there is money on the contract.
 
 ```
 touch#11111111 query_id:uint64 target_index:uint8
                allow_min_reward:Bool = InternalMsgBody;
 ```
 
-За успешное касание его инициатор получает `0.36 TON`.
-Эта сумма также может быть [изменена](contracts/bundle.fc#L15). \
-Инициатор [может получить](scripts/findTouches.ts#L21) данные об
-актуальной награде по get методу `get_max_reward`.
+For a successful touch, its initiator receives `0.36 TON`. This amount can also be [changed](contracts/bundle.fc#L15). \
+The initiator [can get](scripts/findTouches.ts#L21) data about the current reward by the get method `get_max_reward`.
 
-Но это хорошо, когда контракт имеет деньги на награду. Ведь это выбор
-владельца - оставлять на балансе деньги для продления доменов или нет.
-Когда на контракте присутствует **только минимальный баланс** (нужен для
-оплаты storage fee), инициатор касания получить награду не сможет.
+But it's good when a contract has money for a reward. After all, it is the owner's choice whether to leave money on the balance for domain renewal or not. When there is only a minimum balance on the contract (needed to pay the storage fee), the initiator of the touch will not be able to receive the reward.
 
-Чтобы домогатель мог получить полную награду (за продление одного домена),
-на контракте должно быть хотя бы `(reward + min_balance + touch_gas) TON`,
-что с дефолтными параметрами составляет `0.05 + 0.36 + 0.01 = 0.42 TON`.
+In order for the harasser to receive the full reward (for the renewal of one domain), there must be at least `(reward + min_balance + touch_gas) TON` on the contract, which with the default parameters is `0.05 + 0.36 + 0.01 = 0.42 TON`.
 
-Значит расчет баланса контракта, необходимого для оплаты касаний всех
-добавленных доменов можно сделать по формуле
-`min_balance + storage_fee + N * (reward + touch_gas)`,
-где `N` - количество добавленных
-доменов. \
-Подставим числа: `0.05 + 0.02 + N * (0.36 + 0.01)`
+So the calculation of the contract balance required to pay for touches of all added domains can be done using the formula `min_balance + storage_fee + N * (reward + touch_gas)`, where `N` is the number of added domains. \
+Substitute the numbers: `0.05 + 0.02 + N * (0.36 + 0.01)`
 
-И немного успростим, получив совсем простой пример: \
-`balance = 0.07 + N * 0.37`, где `N` - количество добавленных доменов.
+And let's simplify it a little and get a very simple expression: \
+`balance = 0.07 + N * 0.37`, where `N` is the number of domains added.
 
-Вот таблица минимальных рекомендованных балансов, необходимых
-для корректной работы системы продления разного количества доменов:
+Here is a table of the minimum recommended balances required for the correct operation of the renewal system for a different number of domains:
 
 | Domains | 1    | 2    | 3    | 4    | 5    | 6    | 7    | 8    | 9    | 10   |
 | ------- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | Balance | 0.44 | 0.81 | 1.18 | 1.55 | 1.92 | 2.29 | 2.66 | 3.03 | 3.40 | 3.77 |
 
-> Таблица для стандартных значений. Если параметры в контракте меняются -
-> для расчетов нужно использовать данную формулу или пополнять контракт с большим запасом.
+> Table for standard values. If the parameters in the contract change, you need to use the given formula for calculations or replenish the contract with a large margin.
 
 ##### allow\_min\_reward
 
-Но если вдруг монет для награды чуть-чуть не хватает - допустим,
-свободно только `0.3 TON`, когда награда `0.36 TON` - домогатель может
-указать в сообщении, что ему будет достаточно и этого. Для этой цели
-в сообщении последний бит `allow_min_reward` устанавливается в `true`.
+But if suddenly there are not enough coins for the reward - for example, only `0.3 TON` is free, when the reward is `0.36 TON` - the harasser can indicate in the message that this will be enough for him. For this purpose, in the message, the last bit of `allow_min_reward` be set to `true`.
 
-Если `allow_min_reward` будет `true`, а баланса для полной выплаты
-будет достаточно, то домогатель получит всё те же `0.36 TON`.
+If `allow_min_reward` is `true`, and the balance for the full payment is enough, then the harasser will receive all the same `0.36 TON`.
 
-[scripts/findTouches.ts](scripts/findTouches.ts) - Пример сканирования
-Bundle контракта на возможность продления доменов.
+[scripts/findTouches.ts](scripts/findTouches.ts) is an example of scanning a Bundle contract for the possibility of domain renewal.
 
-[scripts/touch.ts](scripts/touch.ts) - Пример анализа баланса и отправки касания.
+[scripts/touch.ts](scripts/touch.ts) is an example of balance analysis and touch sending.
 
 ## Maintainance
 
 #### Tests
 
-Если вы планируете изменять код контракта, вам, возможно, захочется
-его протестировать:
+If you plan to change the contract code, you may want to test it:
 
 ```
 yarn test Bundle
 ```
 
-Тесты можно изменить в [tests/Bundle.spec.ts](tests/Bundle.spec.ts).
+Tests can be modified in [tests/Bundle.spec.ts](tests/Bundle.spec.ts).
 
 #### Dapp
 
-Если после изменений в `wrappers/` или `contracts/` вы хотите далее
-взаимодейстовать с контрактом через dapp, вам нужно обновить в нем
-некоторые файлы:
+If after the changes in `wrappers/` or `contracts/` you want to further interact with the contract via dapp, you need to update some files in it:
 
 ```
 yarn blueprint scaffold --update
 ```
 
-Чтобы запустить dapp локально, следуйте инструкциям в командной строке.
-Для настройки dapp можно воспользоваться
-[документацией Blueprint](https://github.com/ton-org/blueprint/blob/main/SCAFFOLD.md#configuration).
+To run dapp locally, follow the instructions on the command line. To configure the dapp, you can use the [Blueprint documentation](https://github.com/ton-org/blueprint/blob/main/SCAFFOLD.md#configuration ).
 
 ## License
 
