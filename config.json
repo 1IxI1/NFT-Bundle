@@ -104,6 +104,15 @@
             "overrideWithDefault": false
           }
         }
+      },
+      "sendGetStaticData": {
+        "tabName": "",
+        "params": {
+          "value": {
+            "fieldTitle": "",
+            "overrideWithDefault": false
+          }
+        }
       }
     },
     "getFunctions": {
@@ -128,27 +137,33 @@
       "getNFTData": {
         "tabName": "NFT data",
         "params": {},
-        "outNames": ["init", "index", "collection", "owner", "content"]
+        "outNames": {
+          "0": "init",
+          "1": "index",
+          "2": "collection",
+          "3": "owner",
+          "4": "content"
+        }
       },
       "getOwnerAddress": {
         "tabName": "Owner",
         "params": {},
-        "outNames": []
+        "outNames": {}
       },
       "getTouchPeriod": {
         "tabName": "Touch period",
         "params": {},
-        "outNames": []
+        "outNames": {}
       },
       "getMaxReward": {
         "tabName": "Reward",
         "params": {},
-        "outNames": []
+        "outNames": {}
       },
       "getTouchGas": {
         "tabName": "Touch gas",
         "params": {},
-        "outNames": []
+        "outNames": {}
       }
     }
   }
