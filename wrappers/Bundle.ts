@@ -10,58 +10,44 @@ import {
     Dictionary,
     DictionaryValue,
     toNano,
+    internal,
+    MessageRelaxed,
+    storeMessageRelaxed,
 } from "@ton/core";
 import { Op } from "./Ops";
 
 export const MIN_BALANCE = toNano("0.05");
 
+const ADDRNULL = new Address(0, Buffer.alloc(32));
+
 export type BundleConfig = {
     owner: Address;
-    collectibles: Address[];
 };
 
-export type DNSItemsValue = {
-    itemAddress: Address;
-    init: boolean;
-    lastTouched: number;
-};
-
-export const DNSItemsValues: DictionaryValue<DNSItemsValue> = {
+// actions#_ (HashmapE 48 ^MessageAny) = Actions;
+export const ActionsValues: DictionaryValue<MessageRelaxed> = {
     serialize: (src, builder) => {
-        builder.storeAddress(src.itemAddress);
-        builder.storeBit(src.init);
-        builder.storeUint(src.lastTouched, 48);
+        builder.storeRef(beginCell().store(storeMessageRelaxed(src)));
     },
     parse: (src) => {
-        return {
-            itemAddress: src.loadAddress(),
-            init: src.loadBit(),
-            lastTouched: src.loadUint(48),
-        };
+        return internal({ to: ADDRNULL, value: 0n });
     },
 };
 
-export function collectiblesToDict(
-    collectibles: Address[]
-): Dictionary<number, DNSItemsValue> {
-    const result = Dictionary.empty(Dictionary.Keys.Uint(8), DNSItemsValues);
-    for (let i = 0; i < collectibles.length; i++) {
-        result.set(i, {
-            itemAddress: collectibles[i],
-            init: false,
-            lastTouched: 0,
-        });
+export type ScheduledMessage = { at: number; message: MessageRelaxed };
+
+export function actionsToDict(
+    actions: ScheduledMessage[]
+): Dictionary<number, MessageRelaxed> {
+    const result = Dictionary.empty(Dictionary.Keys.Uint(48), ActionsValues);
+    for (let action of actions) {
+        result.set(action.at, action.message);
     }
     return result;
 }
 
 export function bundleConfigToCell(config: BundleConfig): Cell {
-    const collectiblesDict = collectiblesToDict(config.collectibles);
-    return beginCell()
-        .storeUint(0, 8) // inited_count
-        .storeDict(collectiblesDict)
-        .storeAddress(config.owner)
-        .endCell();
+    return beginCell().storeAddress(config.owner).storeDict(null).endCell();
 }
 
 export class Bundle implements Contract {
@@ -117,44 +103,36 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
         });
     }
 
-    async sendAddItem(
+    async sendMessages(
         provider: ContractProvider,
         via: Sender,
-        item: Address,
-        value: bigint = toNano("0.02")
+        messages: ScheduledMessage[],
+        value: bigint = toNano("1")
     ) {
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
-                .storeUint(Op.add_item, 32)
-                .storeUint(0, 64)
-                .storeAddress(item)
+                .storeUint(Op.send, 32)
+                .storeUint(0, 64) // query_id
+                .storeDict(actionsToDict(messages))
                 .endCell(),
         });
     }
 
-    // change_dns_record_req#5eb1f0f9 query_id:uint64 target_index:uint8
-    //                                key:uint256 value:(Maybe ^Cell)
-    //                                = InternalMsgBody;
-
-    async sendChangeRecordReq(
+    async sendSchedule(
         provider: ContractProvider,
         via: Sender,
-        index: number,
-        key: bigint,
-        value?: Cell,
-        tons: bigint = toNano("0.1")
+        messages: ScheduledMessage[],
+        value: bigint = toNano("1")
     ) {
         await provider.internal(via, {
-            value: tons,
+            value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
-                .storeUint(Op.change_dns_record_req, 32)
+                .storeUint(Op.schedule_actions, 32)
                 .storeUint(0, 64)
-                .storeUint(index, 8)
-                .storeUint(key, 256)
-                .storeMaybeRef(value)
+                .storeDict(actionsToDict(messages))
                 .endCell(),
         });
     }
@@ -162,9 +140,8 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
     async sendTouch(
         provider: ContractProvider,
         via: Sender,
-        index: number,
-        allowMinReward: boolean,
-        value: bigint = toNano("0.1")
+        value: bigint = toNano("0.1"),
+        ensuringKey?: number
     ) {
         await provider.internal(via, {
             value,
@@ -172,43 +149,11 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
             body: beginCell()
                 .storeUint(Op.touch, 32)
                 .storeUint(0, 64)
-                .storeUint(index, 8)
-                .storeBit(allowMinReward)
+                .storeMaybeUint(ensuringKey, 48)
                 .endCell(),
         });
     }
 
-    async sendUnpack(
-        provider: ContractProvider,
-        via: Sender,
-        index: number,
-        value: bigint = toNano("0.15")
-    ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: beginCell()
-                .storeUint(Op.unpack, 32)
-                .storeUint(0, 64)
-                .storeUint(index, 8)
-                .endCell(),
-        });
-    }
-
-    async sendUnpackAll(
-        provider: ContractProvider,
-        via: Sender,
-        value: bigint = toNano("1")
-    ) {
-        await provider.internal(via, {
-            value,
-            sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: beginCell()
-                .storeUint(Op.unpack_all, 32)
-                .storeUint(0, 64)
-                .endCell(),
-        });
-    }
     async sendGetStaticData(
         provider: ContractProvider,
         via: Sender,
@@ -222,28 +167,6 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
                 .storeUint(0, 64)
                 .endCell(),
         });
-    }
-
-    async getCollectibles(provider: ContractProvider) {
-        const { stack } = await provider.get("get_collectibles", []);
-        const collectiblesCell = stack.readCellOpt();
-        return Dictionary.loadDirect(
-            Dictionary.Keys.Uint(8),
-            DNSItemsValues,
-            collectiblesCell
-        );
-    }
-
-    async getCollectibleIndex(provider: ContractProvider, target: Address) {
-        const collectibles = await this.getCollectibles(provider);
-        for (let i = 0; i < collectibles.size; i++) {
-            const item = collectibles.get(i);
-            if (!item) return -1;
-            if (item.itemAddress.equals(target)) {
-                return i;
-            }
-        }
-        return -1;
     }
 
     async getNFTData(provider: ContractProvider) {
@@ -261,18 +184,29 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
         return owner;
     }
 
-    async getTouchPeriod(provider: ContractProvider) {
-        const { stack } = await provider.get("get_touch_period", []);
-        return stack.readNumber();
-    }
-
-    async getMaxReward(provider: ContractProvider) {
-        const { stack } = await provider.get("get_max_reward", []);
+    async getReward(provider: ContractProvider) {
+        const { stack } = await provider.get("get_reward", []);
         return stack.readBigNumber();
     }
 
-    async getTouchGas(provider: ContractProvider) {
-        const { stack } = await provider.get("get_touch_gas_consumption", []);
-        return stack.readBigNumber();
+    async getScheduledActions(provider: ContractProvider) {
+        const { stack } = await provider.get("get_scheduled_actions", []);
+        const givenDictCell = stack.readCellOpt();
+        if (givenDictCell) {
+            return Dictionary.loadDirect(
+                Dictionary.Keys.Uint(48),
+                ActionsValues,
+                givenDictCell
+            );
+        }
+        return null;
+    }
+
+    async getTouchRewardAndFee(provider: ContractProvider) {
+        const { stack } = await provider.get("get_touch_reward_and_fee", []);
+        return {
+            reward: stack.readBigNumber(),
+            fee: stack.readBigNumber(),
+        };
     }
 }

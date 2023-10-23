@@ -7,28 +7,28 @@
 #include "stdlib.fc";
 #include "messages.fc";
 
-const int op::change_dns_record = 0x4eb1f0f9;
-const int op::change_dns_record_req = 0x5eb1f0f9;
 const int op::transfer = 0x5fcc3d14;
 const int op::ownership_assigned = 0x05138d91;
 const int op::excesses = 0xd53276db;
 const int op::reward = 0xe64387ec;
-const int op::add_item = 0x3b45b2d6; 
-const int op::unpack = 0x855965fc;
-const int op::unpack_all = 0x39e2f30b;
 const int op::touch = 0x11111111;
 const int op::get_static_data = 0x2fcb26a2;
 const int op::report_static_data = 0x8b771735;
 
+const int op::send = 0x2ecd9aca;
+const int op::schedule_actions = 0x460da638;
+
 const int errors::unauthorized = 351;
-const int errors::nothing_to_init = 352;
-const int errors::already_inited = 353;
-const int errors::item_not_found = 354;
+const int errors::no_actions = 352;
+const int errors::expired = 353;
 const int errors::early_touch = 355;
 const int errors::not_inited = 356;
-const int errors::not_enough_balance = 357;
-const int errors::not_enough_tons = 358;
+const int errors::incorrect_value = 357;
+const int errors::not_enough_balance = 358;
+const int errors::not_enough_tons = 359;
 const int errors::unknown_op = 0xffff;
+
+const int min_balance = 50000000; ;; 0.05 TON
 
 (slice, slice, cell, int, slice) unpack_nft_cmd_transfer(slice cs) inline {
     return (
@@ -43,4 +43,29 @@ const int errors::unknown_op = 0xffff;
 () force_chain(slice addr) impure inline {
     (int wc, _) = parse_std_addr(addr);
     throw_unless(333, wc == 0);
+}
+
+slice transfer_ownership(int my_balance, slice owner, slice in_msg_body, int query_id, int fwd_fees) impure inline {
+    (slice new_owner, slice response_destination, cell custom_payload, int forward_amount, slice forward_payload)
+            = unpack_nft_cmd_transfer(in_msg_body);
+    force_chain(new_owner);
+    int rest_amount = my_balance - min_balance;
+    if (forward_amount) {
+        rest_amount -= (forward_amount + fwd_fees);
+    }
+    int need_response = response_destination.preload_uint(2) != 0; ;; if NOT addr_none: 00
+    if (need_response) {
+        rest_amount -= fwd_fees;
+    }
+    throw_unless(errors::not_enough_tons, rest_amount >= 0); ;; base nft spends fixed amount of gas, will not check for response
+
+    if (forward_amount) {
+        send_msg(new_owner, forward_amount, op::ownership_assigned, query_id,
+                 begin_cell().store_slice(owner).store_slice(forward_payload), mode::PAY_FEES_SEPARATELY);
+    }
+    if (need_response) {
+        force_chain(response_destination);
+        send_msg(response_destination, rest_amount, op::excesses, query_id, null(), mode::PAY_FEES_SEPARATELY);
+    }
+    return new_owner;
 }

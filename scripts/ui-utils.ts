@@ -1,5 +1,6 @@
 import { sleep, NetworkProvider, UIProvider } from "@ton/blueprint";
 import { Address, Cell } from "@ton/core";
+import { TonClient, TonClient4 } from "@ton/ton";
 
 export const promptBool = async (
     prompt: string,
@@ -69,6 +70,17 @@ export const promptAmount = async (prompt: string, provider: UIProvider) => {
     } while (true);
 };
 
+const getLastTxLt = async (api: TonClient | TonClient4, address: Address) => {
+    if (api instanceof TonClient4) {
+        const { last } = await api.getLastBlock();
+        const { account } = await api.getAccount(last.seqno, address);
+        return account.last?.lt;
+    } else {
+        const { lastTransaction } = await api.getContractState(address);
+        return lastTransaction?.lt;
+    }
+};
+
 export const waitForTransaction = async (
     provider: NetworkProvider,
     address: Address,
@@ -77,10 +89,7 @@ export const waitForTransaction = async (
 ) => {
     const api = provider.api();
 
-    const { last } = await api.getLastBlock();
-    const { account } = await api.getAccount(last.seqno, address);
-    const lastTxLt = account.last?.lt;
-
+    const prevTxLt = await getLastTxLt(api, address);
     let done = false;
     let count = 0;
     const ui = provider.ui();
@@ -88,9 +97,7 @@ export const waitForTransaction = async (
     do {
         ui.write(`Awaiting transaction completion [${++count}/${maxRetry}]`);
         await sleep(interval);
-        const { last } = await api.getLastBlock();
-        const { account } = await api.getAccount(last.seqno, address);
-        done = account.last?.lt !== lastTxLt;
+        done = (await getLastTxLt(api, address)) !== prevTxLt;
     } while (!done && count < maxRetry);
     return done;
 };

@@ -100,17 +100,4 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
                 .endCell(),
         });
     }
-
-    static createEditRecordBody(
-        key: bigint,
-        value?: Cell,
-        query_id: bigint = 0n
-    ) {
-        return beginCell()
-            .storeUint(Op.change_dns_record, 32)
-            .storeUint(query_id, 64)
-            .storeUint(key, 256)
-            .storeMaybeRef(value)
-            .endCell();
-    }
 }
