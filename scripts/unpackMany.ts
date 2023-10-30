@@ -17,36 +17,40 @@ export async function run(provider: NetworkProvider, args: string[]) {
 
     const bundle = provider.open(Bundle.createFromAddress(bundleAddress));
 
-    const itemAddress = Address.parse(
-        args.length > 1 ? args[1] : await ui.input("NFT item address")
-    );
-    const item = provider.open(Bundle.createFromAddress(itemAddress));
-    const owner = await item.getOwnerAddress();
-    if (!owner.equals(bundleAddress)) {
-        ui.write("Bundle is not the owner of this item.");
-        return;
-    }
-    let msgs: ScheduledMessage[] = [
-        {
-            at: 0,
+    const itemAddresses = (
+        args.length > 3
+            ? args[3]
+            : await ui.input("NFT prize addresses (separrated by comma)")
+    )
+        .split(",")
+        .map((addr) => Address.parse(addr));
+
+    let msgs: ScheduledMessage[] = [];
+    for (let itemAddr of itemAddresses) {
+        const item = provider.open(Bundle.createFromAddress(itemAddr));
+        const owner = await item.getOwnerAddress();
+        if (!owner.equals(bundleAddress)) {
+            ui.write("Bundle is not the owner of item " + itemAddr.toString());
+            return;
+        }
+        msgs.push({
+            at: msgs.length,
             message: internal({
-                to: itemAddress,
+                to: itemAddr,
                 value: toNano("0.1"),
                 body: Bundle.transferMessage(senderAddress, senderAddress),
             }),
-        },
-    ];
+        });
+    }
+
     await bundle.sendMessages(provider.sender(), msgs);
 
-    let changeSucc = await waitForTransaction(provider, itemAddress, 10);
+    let changeSucc = await waitForTransaction(provider, itemAddresses[0], 10);
 
     if (!changeSucc) {
         ui.write(
-            "Failed to unpack the item. Can not find the message on its side."
+            "Failed to unpack items. Can not find the message on NFT side."
         );
         return;
-    } else
-        ui.write(
-            "Unpack was successfully completed."
-        );
+    } else ui.write("Unpack was successfully completed.");
 }

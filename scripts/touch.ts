@@ -1,88 +1,69 @@
-import { Address, Cell, fromNano, toNano } from "@ton/core";
-import { Bundle, MIN_BALANCE } from "../wrappers/Bundle";
+import { Address, fromNano, toNano } from "@ton/core";
+import { Bundle } from "../wrappers/Bundle";
 import { NetworkProvider } from "@ton/blueprint";
-import { promptAddressOrIndex, waitForTransaction } from "./ui-utils";
+import { promptBool, waitForTransaction } from "./ui-utils";
 
 export async function run(provider: NetworkProvider, args: string[]) {
     const ui = provider.ui();
-    const ownerAddress = provider.sender().address;
+    const toucherAddress = provider.sender().address;
+    const testnet = provider.network() == "testnet";
 
-    if (!Address.isAddress(ownerAddress)) {
-        throw new Error("No owner address");
+    if (!Address.isAddress(toucherAddress)) {
+        throw new Error("No toucher address");
     }
 
     const bundleAddress = Address.parse(
         args.length > 0 ? args[0] : await ui.input("Bundle address")
     );
-    const itemAddressOrIndex = await promptAddressOrIndex(ui);
 
     const bundle = provider.open(Bundle.createFromAddress(bundleAddress));
 
-    const itemIndex =
-        itemAddressOrIndex instanceof Address
-            ? await bundle.getCollectibleIndex(itemAddressOrIndex)
-            : itemAddressOrIndex;
-    if (itemIndex < 0) {
-        ui.write("Item is not in the bundle");
+    const actions = await bundle.getScheduledActions();
+    if (!actions) {
+        ui.write("No scheduled actions");
         return;
     }
-    const itemsBefore = await bundle.getCollectibles();
-    const itemBefore = itemsBefore.get(itemIndex);
-
-    if (!itemBefore?.init) {
-        ui.write("Item is not initialized");
-        return;
-    }
-    const touchPeriod = await bundle.getTouchPeriod();
-    const touchReward = await bundle.getMaxReward();
+    const timers = actions.keys;
+    const minKey = Math.max.apply(timers);
     const now = Math.floor(Date.now() / 1000);
-
-    if (itemBefore.lastTouched + touchPeriod > now) {
-        ui.write("Too early for touch");
+    if (now < minKey) {
+        ui.write("No avaliable actions");
+        ui.write(
+            `The next action will be avaliable at ${minKey}, in ${
+                minKey - now
+            } seconds`
+        );
         return;
     }
 
-    let allow_min_reward = false;
-    const touchGas = await bundle.getTouchGas();
-    const { last } = await provider.api().getLastBlock();
-    const { account } = await provider
-        .api()
-        .getAccount(last.seqno, bundleAddress);
-    const rest = BigInt(account.balance.coins) - MIN_BALANCE;
-    if (rest < touchReward) {
-        if (rest >= touchGas) {
-            const ans = await ui.input(
-                "There is only " +
-                    fromNano(rest - touchGas) +
-                    " TON left to be given as reward. Continue with getting it? (no/yes)"
-            );
-            if (ans === "yes") allow_min_reward = true;
-            else return;
-        } else {
-            ui.write("The contract balance is not enough to pay any reward.");
-            return;
-        }
-    }
+    const { reward, fee } = await bundle.getTouchRewardAndFee();
 
-    await bundle.sendTouch(provider.sender(), itemIndex, allow_min_reward);
-    let touchSucc = await waitForTransaction(
-        provider,
-        itemBefore.itemAddress,
-        10
+    ui.write(`There are avaliable actions to trigger!`);
+    ui.write(`Your expected reward: ${fromNano(reward)} TON`);
+    ui.write(`Expected fee (cost): ${fromNano(fee)} TON`);
+
+    const ensuring = await promptBool(
+        "Set the ensuring key? It will revert the touch if someone will frontrun you [y/n]",
+        ["y", "n"],
+        ui
     );
 
-    const itemsAfter = await bundle.getCollectibles();
-    const itemAfter = itemsAfter.get(itemIndex);
-    if (!itemAfter) {
-        ui.write("Something went wrong. Item has disappeared.");
-        return;
-    }
-    touchSucc =
-        touchSucc && // also check for lastTouched increase
-        itemAfter.lastTouched > itemBefore.lastTouched;
+    await bundle.sendTouch(
+        provider.sender(),
+        toNano("0.5"),
+        ensuring ? minKey : undefined
+    );
+
+    let touchSucc = await waitForTransaction(provider, bundle.address, 10);
 
     if (!touchSucc) {
-        ui.write("Failed to touch");
+        ui.write("Failed to send the touch");
         return;
-    } else ui.write("Succesfully touched the item");
+    } else {
+        ui.write("Succesfully sent touch. Watch the result here: ");
+        ui.write(
+            `https://${testnet ? "testnet." : ""}ton.cx/address/` +
+                bundle.address.toString()
+        );
+    }
 }
