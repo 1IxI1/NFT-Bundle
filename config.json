@@ -4,15 +4,15 @@
     "tabName": "",
     "sendFunctions": {
       "sendDeploy": {
-        "tabName": "Deploy",
+        "tabName": "",
         "params": {
           "value": {
-            "fieldTitle": "TONs"
+            "fieldTitle": ""
           }
         }
       },
       "sendTransfer": {
-        "tabName": "Transfer Bundle (as NFT)",
+        "tabName": "Transfer (as NFT)",
         "params": {
           "to": {
             "fieldTitle": "Destination"
@@ -38,69 +38,40 @@
           }
         }
       },
-      "sendAddItem": {
-        "tabName": "Add Item",
+      "sendMessages": {
+        "tabName": "",
         "params": {
-          "item": {
-            "fieldTitle": "Item"
+          "messages": {
+            "fieldTitle": ""
           },
           "value": {
-            "fieldTitle": "TONs",
+            "fieldTitle": "",
             "overrideWithDefault": false
           }
         }
       },
-      "sendChangeRecordReq": {
-        "tabName": "Change DNS Record",
+      "sendSchedule": {
+        "tabName": "",
         "params": {
-          "index": {
-            "fieldTitle": "Item index"
-          },
-          "key": {
-            "fieldTitle": "DNS Key"
+          "messages": {
+            "fieldTitle": ""
           },
           "value": {
-            "fieldTitle": "DNS Value",
-            "overrideWithDefault": false
-          },
-          "tons": {
-            "fieldTitle": "TONs",
+            "fieldTitle": "",
             "overrideWithDefault": false
           }
         }
       },
       "sendTouch": {
-        "tabName": "Touch domain",
-        "params": {
-          "index": {
-            "fieldTitle": "Item index"
-          },
-          "allowMinReward": {
-            "fieldTitle": "Allow reward less than 0.36 TON"
-          },
-          "value": {
-            "fieldTitle": "TONs",
-            "overrideWithDefault": false
-          }
-        }
-      },
-      "sendUnpack": {
-        "tabName": "Unpack item",
-        "params": {
-          "index": {
-            "fieldTitle": "Item index"
-          },
-          "value": {
-            "fieldTitle": "TONs",
-            "overrideWithDefault": false
-          }
-        }
-      },
-      "sendUnpackAll": {
-        "tabName": "Unpack all & destroy",
+        "tabName": "Touch",
         "params": {
           "value": {
-            "fieldTitle": "TONs",
+            "fieldTitle": "TONs for gas",
+            "overrideWithDefault": false,
+            "defaultValue": "toNano(\"1\")"
+          },
+          "ensuringKey": {
+            "fieldTitle": "Ensure Key",
             "overrideWithDefault": false
           }
         }
@@ -116,24 +87,6 @@
       }
     },
     "getFunctions": {
-      "getCollectibles": {
-        "tabName": "Collectibles",
-        "params": {},
-        "outNames": {
-          "0": "items"
-        }
-      },
-      "getCollectibleIndex": {
-        "tabName": "Find item index",
-        "params": {
-          "target": {
-            "fieldTitle": "Item address"
-          }
-        },
-        "outNames": {
-          "0": "index"
-        }
-      },
       "getNFTData": {
         "tabName": "NFT data",
         "params": {},
@@ -150,20 +103,20 @@
         "params": {},
         "outNames": {}
       },
-      "getTouchPeriod": {
-        "tabName": "Touch period",
-        "params": {},
-        "outNames": {}
-      },
-      "getMaxReward": {
+      "getReward": {
         "tabName": "Reward",
         "params": {},
         "outNames": {}
       },
-      "getTouchGas": {
-        "tabName": "Touch gas",
+      "getScheduledActions": {
+        "tabName": "Scheduled actions",
         "params": {},
-        "outNames": {}
+        "outNames": []
+      },
+      "getTouchRewardAndFee": {
+        "tabName": "Reward & Fee",
+        "params": {},
+        "outNames": []
       }
     }
   }
