@@ -78,11 +78,13 @@ const int touch_one_fee = 3900000; ;; 0.005 TON
         throw_unless(errors::unauthorized, equal_slices(sender_address, owner));
         cell actions = in_msg_body~load_dict();
         do {
-            var (_, slice ms, int succ?) = actions~udict::delete_get_min(48);
+            var (_, slice action, int succ?) = actions~udict::delete_get_min(48);
             if (succ?) {
-                send_raw_message(ms~load_ref(), mode::PAY_FEES_SEPARATELY);
+                send_raw_message(action~load_ref(), mode::PAY_FEES_SEPARATELY);
             }
         } until (~ succ?);
+        raw_reserve(min_balance, reserve::this_amount);
+        in_msg_body.end_parse();
         return ();
     }
 
@@ -94,17 +96,17 @@ const int touch_one_fee = 3900000; ;; 0.005 TON
 
         ifnot ( cell_null?(_actions) ) {
             do {
-                var (_, slice ms, int succ?) = _actions~udict::delete_get_min(48);
+                var (_, slice action, int succ?) = _actions~udict::delete_get_min(48);
                 if (succ?) {
-                    ms = ms~load_ref().begin_parse();
-                    ms~skip_bits(6 + 267); ;; msg flag & destination
-                    int value = ms~load_coins();
+                    action = action~load_ref().begin_parse();
+                    action~skip_bits(6 + 267); ;; msg flag & destination
+                    int value = action~load_coins();
                     throw_unless(errors::incorrect_value, value == renew_amonut);
                 }
             } until (~ succ?);
         }
-
         save_data(owner, actions);
+        in_msg_body.end_parse();
         return ();
     }
 
@@ -133,25 +135,34 @@ const int touch_one_fee = 3900000; ;; 0.005 TON
             var (_, f?) = scheduled_actions.udict_get?(48, ensuring_key);
             throw_unless(errors::expired, f?);
         }
+        ;; ensure msg has no more bits -
+        ;; and sender does exactly what he want to do
+        in_msg_body.end_parse();
 
         var (last_index, last_action, succ?) = scheduled_actions.udict_get_preveq?(48, now());
         throw_unless(errors::early_touch, succ?);
-        int triggered = 0;
+        int triggered_count = 0;
+
+        ;; searching backwards for expired actions and sending them
         while (succ?) {
+            ;; deleting last found action
             scheduled_actions~udict_delete?(48, last_index);
             send_raw_message(last_action~load_ref(), mode::PAY_FEES_SEPARATELY);
-            triggered += 1;
+            triggered_count += 1;
+            ;; going back in time
             (last_index, last_action, succ?) = scheduled_actions.udict_get_prev?(48, last_index);
         }
 
+        ;; we can't use here raw_reserve
+        ;; because message should bounce back to user on failure.
         int balance_before_msg = my_balance - msg_value;
         throw_unless(errors::not_enough_balance,
                      balance_before_msg >= min_balance +
                                    ;; renew_amount + fwd fee for every domain action
-                                   ;; rewards summarize for every action.
-                                   (renew_amonut + fwd_fee + reward) * triggered);
+                                   ;; + rewards summarize for every triggered message.
+                                   (renew_amonut + fwd_fee + reward) * triggered_count);
 
-        send_msg(sender_address, reward * triggered, op::reward, query_id,
+        send_msg(sender_address, reward * triggered_count, op::reward, query_id,
                  null(), mode::CARRY_REMAINING_GAS);
 
         save_data(owner, scheduled_actions);

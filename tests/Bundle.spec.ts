@@ -532,4 +532,8 @@ describe("Bundle", () => {
         });
         expect(owner.address.equals(data.owner)).toBe(true);
     });
+
+    it("should transfer ownership", async () => {
+        await bundle.sendTransfer(owner.getSender());
+    });
 });

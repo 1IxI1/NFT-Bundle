@@ -73,6 +73,24 @@ export class Bundle implements Contract {
         });
     }
 
+    static transferMessage(
+        to: Address,
+        response: Address,
+        forwardAmount: bigint = toNano("0.01"),
+        value?: bigint,
+        customPayload?: Cell,
+        forwardPayload?: Cell
+    ) {
+        return beginCell()
+            .storeUint(Op.transfer, 32)
+            .storeUint(0, 64)
+            .storeAddress(to)
+            .storeAddress(response)
+            .storeMaybeRef(customPayload)
+            .storeCoins(forwardAmount)
+            .storeMaybeRef(forwardPayload)
+            .endCell();
+    }
     /*
 transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgAddress
                   custom_payload:(Maybe ^Cell) forward_amount:(VarUInteger 16)
@@ -91,15 +109,14 @@ transfer#5fcc3d14 query_id:uint64 new_owner:MsgAddress response_destination:MsgA
         await provider.internal(via, {
             value: value ? value : forwardAmount + toNano("0.05"),
             sendMode: SendMode.PAY_GAS_SEPARATELY,
-            body: beginCell()
-                .storeUint(Op.transfer, 32)
-                .storeUint(0, 64)
-                .storeAddress(to)
-                .storeAddress(response)
-                .storeMaybeRef(customPayload)
-                .storeCoins(forwardAmount)
-                .storeMaybeRef(forwardPayload)
-                .endCell(),
+            body: Bundle.transferMessage(
+                to,
+                response,
+                forwardAmount,
+                value,
+                customPayload,
+                forwardPayload
+            ),
         });
     }
 

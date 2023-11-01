@@ -8,4 +8,5 @@ export abstract class Op {
     static readonly report_static_data = 0x8b771735;
     static readonly send = 0x2ecd9aca;
     static readonly schedule_actions = 0x460da638;
+    static readonly change_dns_record = 0x4eb1f0f9;
 }
