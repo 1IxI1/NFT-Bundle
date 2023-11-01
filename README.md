@@ -8,7 +8,7 @@ With an add-on for automatic renewal of [.ton
 domains](https://github.com/ton-blockchain/dns-contract).
 
 <img width=66%
-src="https://github.com/1IxI1/NFT-Bundle/assets/53380262/ad52505a-2c00-4129-bbda-78d74ea499e5"/>
+src="https://github.com/1IxI1/NFT-Bundle/assets/53380262/a7fc160c-9041-42df-a847-ab98e8c04469"/>
 
 ## How it works & Usage
 
